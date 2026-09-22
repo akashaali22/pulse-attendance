@@ -39,13 +39,32 @@ const api = (p: string, init?: RequestInit) =>
 let remoteSha: string | null = null;
 
 /** Downloads the newest snapshot. Runs before anything opens the database. */
+/** Reports which GitHub account the token belongs to — the usual cause of a 404 is the wrong account. */
+async function describeToken(): Promise<string> {
+  try {
+    const r = await fetch("https://api.github.com/user", {
+      headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github+json" },
+    });
+    if (!r.ok) return `token rejected by GitHub (HTTP ${r.status})`;
+    return `token belongs to GitHub user "${((await r.json()) as { login: string }).login}"`;
+  } catch (e) {
+    return `could not reach GitHub (${e instanceof Error ? e.message : e})`;
+  }
+}
+
 export async function restoreFromBackup(): Promise<"restored" | "kept-local" | "none" | "failed"> {
   if (!backupEnabled()) return "none";
   try {
     if (fs.existsSync(DB_FILE) && fs.statSync(DB_FILE).size > 0) return "kept-local";
     const r = await api(`${REMOTE_PATH}?ref=HEAD`);
-    if (r.status === 404) {
-      console.log("[backup] no snapshot yet — starting with a fresh database");
+    if (r.status === 404 || r.status === 401 || r.status === 403) {
+      // A private repository the token cannot see also answers 404, so say who the token is.
+      console.log(`[backup] cannot read ${REPO}/${REMOTE_PATH} — HTTP ${r.status}; ${await describeToken()}`);
+      console.log(
+        r.status === 404
+          ? "[backup] either no snapshot exists yet, or the token has no access to that PRIVATE repo (needs Contents: read and write, and must belong to the repo owner)"
+          : "[backup] the token was rejected — create a new one and update BACKUP_TOKEN",
+      );
       return "none";
     }
     if (!r.ok) throw new Error(`GitHub ${r.status} ${await r.text()}`);
@@ -109,7 +128,7 @@ export async function uploadSnapshot(reason = "change"): Promise<boolean> {
     return true;
   } catch (e) {
     dirty = true; // try again on the next change
-    console.error("[backup] upload failed:", e);
+    console.error("[backup] upload failed:", e, "—", await describeToken());
     return false;
   } finally {
     uploading = false;
