@@ -1,0 +1,20 @@
+# Render blueprint — free plan, no credit card.
+# NOTE: the free plan has NO persistent disk and sleeps after 15 minutes of inactivity, so the
+# database resets whenever the service restarts. Good for a public demo (DEMO_MODE refills it),
+# NOT for a real company. For production use Docker/Fly with a volume, or self-host (docs/DEPLOY.md).
+services:
+  - type: web
+    name: pulse-attendance-demo
+    runtime: docker
+    plan: free
+    region: singapore
+    healthCheckPath: /login
+    envVars:
+      - key: DEMO_MODE
+        value: "1"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: TZ
+        value: Asia/Karachi
+      - key: ATTENDANCE_DATA_DIR
+        value: /tmp/pulse-data

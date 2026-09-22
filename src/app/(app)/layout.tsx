@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { usesDefaultPassword } from "@/lib/passwords";
+import { demoMode } from "@/lib/demo";
 import { all, getSetting } from "@/lib/db";
 import { pendingApprovalsCount } from "@/lib/data";
 import { Shell, type NavItem, type Notice } from "@/components/shell";
@@ -46,6 +47,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       company={getSetting("company_name", "My Company")}
       user={{ name: me.name, email: me.email, role: me.role, designation: me.designation }}
     >
+      {demoMode() && (
+        <div className="mb-4 rounded-2xl border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-ink">
+          <strong>Demo.</strong> Sample data, and everything resets when the server restarts. Run your own copy from{" "}
+          <a href="https://github.com/akashaali98/pulse-attendance" className="text-accent underline" target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+          .
+        </div>
+      )}
       {(await usesDefaultPassword(me.id)) && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-bad/40 bg-bad/10 px-4 py-3 text-sm">
           <ShieldAlert className="size-5 shrink-0 text-bad" />

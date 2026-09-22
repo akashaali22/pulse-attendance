@@ -4,6 +4,7 @@ import { computeRange, getTz, shiftRules, todayLocal } from "./data";
 import { notify } from "./notify";
 import { syncRecentPenalties } from "./penalty";
 import { autoCloseAgentSessions } from "./agent";
+import { seedDemoIfEmpty } from "./demo";
 import { dayOfWeek, hhmmToMinutes, localMinutes } from "./time";
 
 const g = globalThis as unknown as { __attendanceJobs?: boolean };
@@ -11,6 +12,7 @@ const g = globalThis as unknown as { __attendanceJobs?: boolean };
 export function startJobs() {
   if (g.__attendanceJobs) return;
   g.__attendanceJobs = true;
+  void seedDemoIfEmpty().catch((e) => console.error("[jobs] demo seed failed:", e));
   safe(() => syncRecentPenalties(), "late penalty sync");
   setInterval(() => {
     safe(breakAlerts, "break alerts");
