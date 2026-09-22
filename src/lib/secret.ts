@@ -13,6 +13,14 @@ let cached: Buffer | null = null;
 
 function key(): Buffer {
   if (cached) return cached;
+  // Hosts without a persistent disk must set PASSWORD_KEY (64 hex chars), otherwise a new key would
+  // be generated on every restart and previously stored passwords could no longer be read.
+  const fromEnv = (process.env.PASSWORD_KEY ?? "").trim();
+  if (fromEnv) {
+    if (!/^[0-9a-f]{64}$/i.test(fromEnv)) throw new Error("PASSWORD_KEY must be 64 hex characters");
+    cached = Buffer.from(fromEnv, "hex");
+    return cached;
+  }
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(KEY_FILE)) fs.writeFileSync(KEY_FILE, crypto.randomBytes(32).toString("hex"), { mode: 0o600 });
   cached = Buffer.from(fs.readFileSync(KEY_FILE, "utf8").trim(), "hex");
