@@ -50,7 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {demoMode() && (
         <div className="mb-4 rounded-2xl border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-ink">
           <strong>Demo.</strong> Sample data, and everything resets when the server restarts. Run your own copy from{" "}
-          <a href="https://github.com/akashaali98/pulse-attendance" className="text-accent underline" target="_blank" rel="noreferrer">
+          <a href="https://github.com/akashaali22/pulse-attendance" className="text-accent underline" target="_blank" rel="noreferrer">
             GitHub
           </a>
           .

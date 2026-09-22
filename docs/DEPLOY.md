@@ -50,7 +50,7 @@ working even when nobody has the site open.
 ## Option 2 — Docker on your own server
 
 ```bash
-git clone https://github.com/akashaali98/pulse-attendance.git
+git clone https://github.com/akashaali22/pulse-attendance.git
 cd pulse-attendance
 docker compose up -d           # http://<server-ip>:3000
 ```
@@ -79,7 +79,7 @@ Then set `COOKIE_SECURE=true` in `docker-compose.yml` and restart.
 Good when everything stays inside the office network.
 
 ```powershell
-git clone https://github.com/akashaali98/pulse-attendance.git
+git clone https://github.com/akashaali22/pulse-attendance.git
 cd pulse-attendance
 npm ci
 npm run build

@@ -55,7 +55,7 @@ tamper-evident audit log.
 Requires **Node.js 24+** (the database uses the built-in `node:sqlite` module).
 
 ```bash
-git clone https://github.com/akashaali98/pulse-attendance.git
+git clone https://github.com/akashaali22/pulse-attendance.git
 cd pulse-attendance
 npm install
 npm run dev            # http://localhost:3000
