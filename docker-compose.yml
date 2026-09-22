@@ -1,0 +1,17 @@
+# Self-hosting on your own server or office PC:  docker compose up -d
+services:
+  pulse:
+    build: .
+    container_name: pulse-attendance
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      TZ: Asia/Karachi
+      # Set to "true" only when the app is served over HTTPS (behind a reverse proxy).
+      COOKIE_SECURE: "false"
+    volumes:
+      - pulse-data:/data
+
+volumes:
+  pulse-data:

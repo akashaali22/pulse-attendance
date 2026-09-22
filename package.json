@@ -1,27 +1,44 @@
 {
-  "name": "web",
-  "version": "0.1.0",
-  "private": true,
+  "name": "pulse-attendance",
+  "version": "1.0.0",
+  "private": "false",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start -H 0.0.0.0 -p 3000",
+    "lint": "eslint",
+    "test": "vitest run",
+    "seed:demo": "node scripts/seed-demo.mjs",
+    "build:agent": "node scripts/build-agent.mjs"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
+    "lucide-react": "^1.45.0",
+    "next": "15.5.25",
+    "qrcode": "^1.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.25"
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^24.13.4",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.5.25",
-    "@eslint/eslintrc": "^3"
+    "playwright-core": "^1.63.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^5.0.0"
+  },
+  "description": "Self-hosted attendance, leave and time tracking with a Windows agent that records attendance automatically",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
   }
 }

@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+data
+test-run
+agent/bin
+agent/obj
+*.log
+README.md
+docs

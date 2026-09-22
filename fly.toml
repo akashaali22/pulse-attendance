@@ -1,0 +1,36 @@
+# Fly.io deployment. Create the app and volume once:
+#   fly launch --no-deploy --copy-config --name <your-app-name>
+#   fly volumes create pulse_data --size 1 --region sin
+#   fly deploy
+app = "pulse-attendance"
+primary_region = "sin"          # Singapore is the closest free region to Pakistan
+
+[build]
+
+[env]
+  ATTENDANCE_DATA_DIR = "/data"
+  COOKIE_SECURE = "true"
+  TZ = "Asia/Karachi"
+
+# The SQLite database, selfies and the password key live here. Never delete this volume.
+[[mounts]]
+  source = "pulse_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 3000
+  force_https = true            # camera and GPS only work over HTTPS
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1      # keep one machine up so break alerts and auto check-out keep running
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+# One machine only: SQLite is a single file on one volume.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+  cpus = 1
