@@ -259,6 +259,15 @@ function conn(): DatabaseSync {
   return g.__attendanceDb ?? (g.__attendanceDb = open());
 }
 
+/** Raw connection (used by the backup snapshotter). */
+export const db = conn;
+
+// Set by the backup module when snapshotting is enabled; called after every write.
+let onWrite: (() => void) | null = null;
+export const setOnWrite = (fn: () => void) => {
+  onWrite = fn;
+};
+
 export type Row = Record<string, unknown>;
 
 export function all<T = Row>(sql: string, ...params: SqlParam[]): T[] {
@@ -270,7 +279,9 @@ export function get<T = Row>(sql: string, ...params: SqlParam[]): T | undefined 
   return (r ? { ...r } : undefined) as T | undefined;
 }
 export function run(sql: string, ...params: SqlParam[]) {
-  return conn().prepare(sql).run(...params);
+  const r = conn().prepare(sql).run(...params);
+  onWrite?.();
+  return r;
 }
 export type SqlParam = string | number | null | bigint;
 
@@ -280,6 +291,7 @@ export function tx<T>(fn: () => T): T {
   try {
     const r = fn();
     db.exec("COMMIT");
+    onWrite?.();
     return r;
   } catch (e) {
     db.exec("ROLLBACK");

@@ -1,17 +1,30 @@
 # Render blueprint — free plan, no credit card.
-# NOTE: the free plan has NO persistent disk and sleeps after 15 minutes of inactivity, so the
-# database resets whenever the service restarts. Good for a public demo (DEMO_MODE refills it),
-# NOT for a real company. For production use Docker/Fly with a volume, or self-host (docs/DEPLOY.md).
+#
+# The free plan has NO persistent disk, so the database is snapshotted to a PRIVATE GitHub repo and
+# restored on every start (see src/lib/backup.ts). Set BACKUP_REPO and BACKUP_TOKEN below, or the
+# data disappears whenever Render restarts the service.
+#
+# Free-plan trade-offs: the service sleeps after ~15 minutes with no traffic (first visit then takes
+# up to a minute to wake), and a hard crash can lose the last ~30 seconds of changes.
 services:
   - type: web
-    name: pulse-attendance-demo
+    name: pulse-attendance
     runtime: docker
     plan: free
     region: singapore
     healthCheckPath: /login
     envVars:
+      # owner/repo of a PRIVATE repository that stores the database snapshots
+      - key: BACKUP_REPO
+        sync: false
+      # GitHub token with "Contents: read and write" on that repository (set it as a secret)
+      - key: BACKUP_TOKEN
+        sync: false
+      - key: BACKUP_INTERVAL_SEC
+        value: "30"
+      # "1" fills an empty database with a sample company (for a public demo). Use "0" for real use.
       - key: DEMO_MODE
-        value: "1"
+        value: "0"
       - key: COOKIE_SECURE
         value: "true"
       - key: TZ

@@ -76,13 +76,14 @@ npm run seed:demo      # manager@demo.local / Demo@1234
 
 ## Deploy
 
-**Try it free (demo, no credit card)**
+**Free hosting, no credit card, no server of your own**
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/akashaali22/pulse-attendance)
 
-Render's free plan has no persistent disk and sleeps when idle, so this is a **demo only**:
-`DEMO_MODE=1` refills a sample company on every restart. For real use, pick one of the options
-below — see [docs/DEPLOY.md](docs/DEPLOY.md) for the full guide.
+Render's free plan has no disk, so the app snapshots its database to a **private GitHub repo** and
+restores it on every start — set `BACKUP_REPO` and `BACKUP_TOKEN` and your data survives restarts.
+The free service sleeps after ~15 minutes of no traffic and a crash can cost the last ~30 seconds of
+changes; [docs/DEPLOY.md](docs/DEPLOY.md) walks through it and lists the alternatives.
 
 **Docker (any server or office PC)**
 

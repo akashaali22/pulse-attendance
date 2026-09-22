@@ -8,6 +8,46 @@ Node.js process with a disk, and background jobs that keep running between reque
 
 ---
 
+## Option 0 — Render free plan, zero cost (database kept in a private GitHub repo)
+
+No credit card, no server of your own, HTTPS included. Render's free plan has **no disk**, so the
+app snapshots its SQLite database to a **private GitHub repository** and restores it on every start.
+
+**1. Create the snapshot repository** (private, empty):
+
+```bash
+gh repo create pulse-attendance-data --private
+```
+
+**2. Create a token** at <https://github.com/settings/personal-access-tokens/new>:
+- Repository access: **Only select repositories** → `pulse-attendance-data`
+- Permissions: **Contents → Read and write**
+- Copy the token (starts with `github_pat_`)
+
+**3. Deploy on Render** (<https://render.com>, sign up with GitHub — no card):
+- **New → Blueprint** → pick your `pulse-attendance` repo → Apply
+- When asked, fill in:
+  - `BACKUP_REPO` = `your-username/pulse-attendance-data`
+  - `BACKUP_TOKEN` = the token from step 2
+- First build takes 5–10 minutes, then you get `https://<name>.onrender.com`
+
+**4. Sign in** as `admin@company.com` / `Admin@123` and change the password immediately.
+
+What to expect on the free plan:
+
+| | |
+|---|---|
+| Cost | $0, no card |
+| Sleeps | after ~15 min without traffic; the next visit takes up to a minute to wake. Desktop agents ping every minute, so it stays awake during office hours |
+| Data safety | snapshot after every change (batched, default 30 s) and again on shutdown. A hard crash can lose the last ~30 seconds |
+| Limits | 750 instance-hours/month, 512 MB RAM — enough for one always-on service |
+| Backups | every snapshot is a commit in your private repo, so you have full history. Download anytime: `gh api repos/<you>/pulse-attendance-data/contents/db/attendance.db --jq .download_url` |
+
+For a **public demo** instead of real use, set `DEMO_MODE=1` and leave `BACKUP_*` empty: the sample
+company is recreated on every restart.
+
+---
+
 ## Option 1 — Fly.io (free allowance, HTTPS included)
 
 Best if employees check in from phones: HTTPS is required for camera and GPS, and Fly gives you a
