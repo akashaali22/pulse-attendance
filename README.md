@@ -5,6 +5,10 @@ attendance automatically when employees log on, lock and shut down their PC.
 
 One Next.js server, one SQLite file. No cloud account, no per-seat pricing, no external database.
 
+[![CI](https://github.com/akashaali22/pulse-attendance/actions/workflows/ci.yml/badge.svg)](https://github.com/akashaali22/pulse-attendance/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A524-green.svg)](https://nodejs.org)
+
 ![Dashboard](docs/screenshots/dashboard.png)
 
 ## Why
@@ -71,6 +75,14 @@ npm run seed:demo      # manager@demo.local / Demo@1234
 ```
 
 ## Deploy
+
+**Try it free (demo, no credit card)**
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/akashaali22/pulse-attendance)
+
+Render's free plan has no persistent disk and sleeps when idle, so this is a **demo only**:
+`DEMO_MODE=1` refills a sample company on every restart. For real use, pick one of the options
+below — see [docs/DEPLOY.md](docs/DEPLOY.md) for the full guide.
 
 **Docker (any server or office PC)**
 
