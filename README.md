@@ -76,14 +76,17 @@ npm run seed:demo      # manager@demo.local / Demo@1234
 
 ## Deploy
 
-**Free hosting, no credit card, no server of your own**
+**Free hosting with no credit card — Hugging Face Spaces**
+
+Free hosts give you no permanent disk, so the app snapshots its SQLite database to a **private
+GitHub repo** and restores it on every start (`BACKUP_REPO` + `BACKUP_TOKEN`). Copy the two files in
+[`deploy/huggingface/`](deploy/huggingface/) into a new Docker Space and it builds itself from this
+repository — [docs/DEPLOY.md](docs/DEPLOY.md) has the click-by-click steps.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/akashaali22/pulse-attendance)
 
-Render's free plan has no disk, so the app snapshots its database to a **private GitHub repo** and
-restores it on every start — set `BACKUP_REPO` and `BACKUP_TOKEN` and your data survives restarts.
-The free service sleeps after ~15 minutes of no traffic and a crash can cost the last ~30 seconds of
-changes; [docs/DEPLOY.md](docs/DEPLOY.md) walks through it and lists the alternatives.
+Render works the same way but now asks for a card to verify your identity. For data you cannot
+afford to lose, use a host with a real disk (Fly.io, a VPS, or your own machine) — see the guide.
 
 **Docker (any server or office PC)**
 

@@ -8,7 +8,32 @@ Node.js process with a disk, and background jobs that keep running between reque
 
 ---
 
-## Option 0 — Render free plan, zero cost (database kept in a private GitHub repo)
+## Option 0a — Hugging Face Spaces, free and **no credit card**
+
+Render and Koyeb now ask for a card even on their free plans. Hugging Face Spaces does not, and a
+free Space only sleeps after **48 hours** without traffic.
+
+A Space has no permanent disk, so keep the database in a private GitHub repo (`BACKUP_REPO` /
+`BACKUP_TOKEN`, see Option 0 below for how to create the repo and token).
+
+1. Sign up at <https://huggingface.co/join> (email only) and open **New → Space**
+   - Space name: `pulse-attendance` · License: MIT · SDK: **Docker** → *Blank* · Hardware: **CPU basic (free)**
+2. In the new Space open **Files → + Add file → Create a new file** and add the two files from
+   [`deploy/huggingface/`](../deploy/huggingface/) in this repository:
+   - `Dockerfile` (it clones this repo and builds it)
+   - `README.md` (its YAML header tells the Space to use Docker on port 3000)
+3. **Settings → Variables and secrets** → add `BACKUP_REPO`, `ATTENDANCE_DATA_DIR=/tmp/pulse-data`,
+   `COOKIE_SECURE=true`, `TZ`, `DEMO_MODE=0` as *variables*, and `BACKUP_TOKEN` as a **secret**
+4. The Space builds in 5–10 minutes, then runs at `https://<user>-pulse-attendance.hf.space`
+
+To deploy a newer version later: **Settings → Factory rebuild**.
+
+---
+
+## Option 0 — Render free plan (database kept in a private GitHub repo)
+
+> Render now asks for a credit card to verify identity, even for the free plan. Nothing is charged,
+> but if you would rather not give a card, use Option 0a above.
 
 No credit card, no server of your own, HTTPS included. Render's free plan has **no disk**, so the
 app snapshots its SQLite database to a **private GitHub repository** and restores it on every start.
