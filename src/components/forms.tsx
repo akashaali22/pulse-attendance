@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { createContext, useContext, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -24,32 +24,42 @@ export function ActionForm({
 }) {
   const { t, toast } = usePrefs();
   const ref = useRef<HTMLFormElement>(null);
-  const [state, formAction] = useActionState(action, null);
   const router = useRouter();
-  useEffect(() => {
-    if (!state) return;
-    if (state.ok) {
-      if (state.message && /password:/i.test(state.message)) window.alert(state.message);
-      else toast(t(state.message ?? "Saved successfully"));
-      if (resetOnSuccess) ref.current?.reset();
-      onSuccess?.();
-      router.refresh();
-    } else toast(t(state.error), "error");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
+  // Dispatched from a transition rather than <form action={…}>: after a result that does not
+  // refresh the router, React stops dispatching further submits, so a retry after an error
+  // (a mistyped password, say) silently did nothing until the page was reloaded.
+  const [pending, start] = useTransition();
+
+  const submit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (pending) return;
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    start(async () => {
+      const state = await action(null, data);
+      if (state.ok) {
+        if (state.message && /password:/i.test(state.message)) window.alert(state.message);
+        else toast(t(state.message ?? "Saved successfully"));
+        if (resetOnSuccess) ref.current?.reset();
+        onSuccess?.();
+        router.refresh();
+      } else toast(t(state.error), "error");
+    });
+  };
+
   return (
-    <form ref={ref} action={formAction} className={className}>
-      {children}
+    <form ref={ref} onSubmit={submit} className={className}>
+      <PendingContext.Provider value={pending}>{children}</PendingContext.Provider>
     </form>
   );
 }
 
-export function SubmitButton({ children, className, pendingText }: { children: React.ReactNode; className?: string; pendingText?: string }) {
-  return <PendingAware className={className} pendingText={pendingText}>{children}</PendingAware>;
-}
+/** Lets SubmitButton show the in-flight state of the ActionForm around it. */
+const PendingContext = createContext(false);
 
-function PendingAware({ children, className, pendingText }: { children: React.ReactNode; className?: string; pendingText?: string }) {
-  const { pending } = useFormStatus();
+export function SubmitButton({ children, className, pendingText }: { children: React.ReactNode; className?: string; pendingText?: string }) {
+  const formPending = useFormStatus().pending;
+  const pending = useContext(PendingContext) || formPending;
   return (
     <button type="submit" disabled={pending} className={clsx("btn btn-primary", className)}>
       {pending ? (
@@ -63,7 +73,6 @@ function PendingAware({ children, className, pendingText }: { children: React.Re
   );
 }
 
-/** Button that runs a server action with optional confirm + prompt for a note. */
 export function ActionButton({
   run,
   children,

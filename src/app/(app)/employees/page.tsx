@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { MapPin, Camera, Power } from "lucide-react";
+import { MapPin, Camera, KeyRound, Power } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { all } from "@/lib/db";
 import { getPrefs } from "@/lib/prefs";
 import { setEmployeeStatus } from "@/actions/admin";
 import { PasswordCell, SetPasswordButton } from "./password-cell";
 import { passwordViewEnabled } from "@/lib/passwords";
+import { dismissResetRequest, pendingResetRequests } from "@/actions/recovery";
 import { ActionButton } from "@/components/forms";
 import { Avatar, Card, Empty, PageHeader } from "@/components/ui";
 import { EmployeeDialog, type EmployeeInput } from "./employee-form";
@@ -16,6 +17,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const me = await requireUser(["admin", "manager"]);
   const isAdmin = me.role === "admin";
   const canSeePasswords = passwordViewEnabled();
+  const resetRequests = await pendingResetRequests();
   const { t } = await getPrefs();
   const { q = "", show } = await searchParams;
   const like = `%${q.trim()}%`;
@@ -46,6 +48,35 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
       >
         {isAdmin && <EmployeeDialog {...opts} nextCode={nextCode} />}
       </PageHeader>
+      {resetRequests.length > 0 && (
+        <Card
+          className="mb-4 border-warn/40"
+          title={
+            <span className="flex items-center gap-2 text-warn">
+              <KeyRound className="size-4" /> {t("Password reset requests")} · {resetRequests.length}
+            </span>
+          }
+        >
+          <ul className="divide-y divide-line">
+            {resetRequests.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                <Avatar name={r.name} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-ink">{r.name}</div>
+                  <div className="truncate text-xs text-muted">
+                    {r.emp_code} · {r.email}
+                    {r.note ? ` · “${r.note}”` : ""} · {new Date(r.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                  </div>
+                </div>
+                <SetPasswordButton userId={r.user_id} name={r.name} label={t("Set new password")} />
+                <ActionButton run={dismissResetRequest.bind(null, r.id)} confirm="Dismiss this request?">
+                  {t("Dismiss")}
+                </ActionButton>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
       <form className="mb-4 flex flex-wrap gap-2">
         <input name="q" defaultValue={q} placeholder={`${t("Search")}…`} className="input max-w-xs" />
         <label className="flex items-center gap-2 text-sm text-ink-2">

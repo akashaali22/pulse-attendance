@@ -4,7 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 export function middleware(req: NextRequest) {
   const hasSession = req.cookies.has("att_session");
   const { pathname, search } = req.nextUrl;
-  if (!hasSession && pathname !== "/login") {
+  const isPublic = pathname === "/login" || pathname === "/forgot";
+  if (!hasSession && !isPublic) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.search = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname + search)}`;

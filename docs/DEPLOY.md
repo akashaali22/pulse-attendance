@@ -54,6 +54,9 @@ gh repo create pulse-attendance-data --private
 - When asked, fill in:
   - `BACKUP_REPO` = `your-username/pulse-attendance-data`
   - `BACKUP_TOKEN` = the token from step 2
+  - `ADMIN_RECOVERY_CODE` — Render generates one; copy it from **Environment** and keep it
+    somewhere safe. It is what lets you set a new admin password from **Forgot password** if
+    you are ever locked out.
 - First build takes 5–10 minutes, then you get `https://<name>.onrender.com`
 
 **4. Sign in** as `admin@company.com` / `Admin@123` and change the password immediately.

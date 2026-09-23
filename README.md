@@ -40,6 +40,8 @@ tamper-evident audit log.
 - Correction requests for missed punches; managers can also edit a day directly — originals are
   voided, never deleted
 - Notifications, approvals inbox, employee and PC management
+- Forgotten passwords without an email server: an employee asks from the sign-in page and every
+  admin (plus their manager) is notified; a locked-out admin uses `ADMIN_RECOVERY_CODE`
 
 **Reporting**
 - Live team board, 14-day trend, department rates, month heatmap
@@ -130,7 +132,7 @@ and password. Details, including how offline periods and clock changes are handl
 | Office geofences | Settings → Locations |
 | Departments, holidays, leave types | Settings |
 | Agent away/offline limits, linked PCs | Settings → Desktop agent |
-| `ATTENDANCE_DATA_DIR`, `COOKIE_SECURE`, `TZ` | environment ([.env.example](.env.example)) |
+| `ATTENDANCE_DATA_DIR`, `COOKIE_SECURE`, `TZ`, `ADMIN_RECOVERY_CODE` | environment ([.env.example](.env.example)) |
 
 ## Security
 
@@ -144,6 +146,8 @@ passwords (Settings → Company; on by default, and it can be turned off permane
 npm test                                                  # rules engine (unit)
 BASE=http://localhost:3000 node scripts/e2e-smoke.mjs     # app end-to-end (uses installed Edge)
 BASE=http://localhost:3000 node scripts/password-test.mjs # password visibility rules
+BASE=http://localhost:3000 node scripts/forgot-password-test.mjs  # reset requests and admin recovery
+BASE=http://localhost:3000 node scripts/retry-test.mjs            # a form still works after a rejection
 BASE=http://localhost:3000 node scripts/agent-api-test.mjs        # agent API incl. offline sync
 node scripts/agent-lifecycle-test.mjs --email you@company.com     # real PC test incl. a restart
 node scripts/backup-race-test.mjs --repo <owner/repo> --token <t> # two instances, one snapshot

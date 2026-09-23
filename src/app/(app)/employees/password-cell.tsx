@@ -68,7 +68,7 @@ export function PasswordCell({ userId, setBy, changedAt, enabled = true }: { use
 }
 
 /** "Update password" dialog for admins. Empty = generate a secure temporary password. */
-export function SetPasswordButton({ userId, name }: { userId: number; name: string }) {
+export function SetPasswordButton({ userId, name, label }: { userId: number; name: string; label?: string }) {
   const { toast } = usePrefs();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -85,8 +85,14 @@ export function SetPasswordButton({ userId, name }: { userId: number; name: stri
 
   return (
     <>
-      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(true)} title="Update password" aria-label="Update password">
-        <KeyRound className="size-3.5" />
+      <button
+        type="button"
+        className={label ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
+        onClick={() => setOpen(true)}
+        title="Update password"
+        aria-label="Update password"
+      >
+        <KeyRound className="size-3.5" /> {label}
       </button>
       {open && (
         <Portal>
