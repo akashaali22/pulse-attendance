@@ -14,9 +14,11 @@
 # local test-run state and reports
 /test-run/
 
-# compiled Windows agent (build it with: npm run build:agent)
-/agent/bin/
+# The built Windows agent IS committed, so a deployment can hand it to employees.
+# Rebuild with: npm run build:agent  (Windows only)
 /agent/obj/
+/agent/bin/*
+!/agent/bin/PulseAgent.exe
 
 # env files
 .env*

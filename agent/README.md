@@ -20,8 +20,11 @@ status and hours.
 
 ## Install
 
-1. Build it (on Windows, from the project root): `npm run build:agent` → `agent/bin/PulseAgent.exe`
-2. Admins can then download it from **Settings → Desktop agent**.
+A built `bin/PulseAgent.exe` is committed so a deployment can hand it to employees without a Windows
+build machine. Verify it against `bin/PulseAgent.exe.sha256`, or rebuild it yourself on Windows with
+`npm run build:agent` — the source is one file, [src/PulseAgent.cs](src/PulseAgent.cs).
+
+1. Employees get it from **Get the app** in the sidebar (admins also see it in Settings → Desktop agent).
 3. Optional: put a text file named `server.txt` next to the exe containing the server address, so
    employees don't have to type it.
 4. Run it once on each PC and sign in with the employee's email and password. It adds itself to
