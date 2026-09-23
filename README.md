@@ -146,6 +146,15 @@ BASE=http://localhost:3000 node scripts/e2e-smoke.mjs     # app end-to-end (uses
 BASE=http://localhost:3000 node scripts/password-test.mjs # password visibility rules
 BASE=http://localhost:3000 node scripts/agent-api-test.mjs        # agent API incl. offline sync
 node scripts/agent-lifecycle-test.mjs --email you@company.com     # real PC test incl. a restart
+node scripts/backup-race-test.mjs --repo <owner/repo> --token <t> # two instances, one snapshot
+node scripts/live-acceptance.mjs --base https://your-app --admin admin@company.com --password '…'
+```
+
+Housekeeping for a deployment kept in a snapshot repo:
+
+```bash
+node scripts/remove-demo-data.mjs --repo <owner/repo> --token <t> --dry-run   # drop sample staff
+node scripts/migrate-employee.mjs --email someone@company.com --repo … --token …  # import one person
 ```
 
 ## Known limits
