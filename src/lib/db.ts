@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
@@ -220,7 +220,7 @@ function migrate(db: DatabaseSync) {
   const cols = (db.prepare("PRAGMA table_info(shifts)").all() as { name: string }[]).map((c) => c.name);
   if (!cols.includes("break_start")) {
     db.exec("ALTER TABLE shifts ADD COLUMN break_start TEXT; ALTER TABLE shifts ADD COLUMN break_end TEXT;");
-    // Company policy: 09:00–18:00 with a fixed 13:15–14:15 break; lateness is handled by the weekly allowance.
+    // Company policy: 09:00â€“18:00 with a fixed 13:15â€“14:15 break; lateness is handled by the weekly allowance.
     db.exec("UPDATE shifts SET break_start = '13:15', break_end = '14:15'");
     db.exec("UPDATE shifts SET grace_minutes = 0 WHERE is_default = 1");
   }
@@ -262,11 +262,25 @@ function conn(): DatabaseSync {
 /** Raw connection (used by the backup snapshotter). */
 export const db = conn;
 
+/** Closes the connection so the next query reopens the file (used after restoring a newer snapshot). */
+export function resetConnection() {
+  try {
+    g.__attendanceDb?.close();
+  } catch {
+    /* already closed */
+  }
+  g.__attendanceDb = undefined;
+}
+
 // Set by the backup module when snapshotting is enabled; called after every write.
-let onWrite: (() => void) | null = null;
+// Kept on globalThis because the production build loads this module more than once (the startup
+// instrumentation and the request handlers get separate copies), and a module-level variable would
+// only notify the copy that registered it â€” request writes would then never be snapshotted.
+const gw = globalThis as unknown as { __attendanceOnWrite?: () => void };
 export const setOnWrite = (fn: () => void) => {
-  onWrite = fn;
+  gw.__attendanceOnWrite = fn;
 };
+const onWrite = () => gw.__attendanceOnWrite?.();
 
 export type Row = Record<string, unknown>;
 
@@ -280,7 +294,7 @@ export function get<T = Row>(sql: string, ...params: SqlParam[]): T | undefined 
 }
 export function run(sql: string, ...params: SqlParam[]) {
   const r = conn().prepare(sql).run(...params);
-  onWrite?.();
+  onWrite();
   return r;
 }
 export type SqlParam = string | number | null | bigint;
@@ -291,7 +305,7 @@ export function tx<T>(fn: () => T): T {
   try {
     const r = fn();
     db.exec("COMMIT");
-    onWrite?.();
+    onWrite();
     return r;
   } catch (e) {
     db.exec("ROLLBACK");

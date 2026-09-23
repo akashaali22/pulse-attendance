@@ -1,0 +1,12 @@
+import { chromium } from "playwright-core";
+const BASE = "https://pulse-attendance.onrender.com";
+const b = await chromium.launch({ channel: "msedge" });
+const p = await (await b.newContext()).newPage();
+await p.goto(`${BASE}/login`, { timeout: 180000 });
+await p.fill("#email", "admin@company.com");
+await p.fill("#password", process.argv[2]);
+await p.click("button[type=submit]");
+const ok = await p.waitForURL(/dashboard/, { timeout: 45000 }).then(() => true, () => false);
+console.log("login:", ok);
+if (!ok) console.log("page says:", (await p.locator("form p").allTextContents()).join(" | ") || "(no message)");
+await b.close();

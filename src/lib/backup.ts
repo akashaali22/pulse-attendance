@@ -37,6 +37,45 @@ const api = (p: string, init?: RequestInit) =>
   });
 
 let remoteSha: string | null = null;
+const startedAt = Date.now();
+// A deploy briefly runs two containers. The new one must not overwrite the snapshot the departing
+// one is about to write, so every snapshot carries a serial number and we only ever move forward.
+const SERIAL_KEY = "snapshot_serial";
+const FIRST_UPLOAD_DELAY = Math.max(0, Number(process.env.BACKUP_FIRST_DELAY_SEC ?? 45)) * 1000;
+
+async function latestRemote(): Promise<{ serial: number; sha: string | null }> {
+  try {
+    const r = await fetch(`https://api.github.com/repos/${REPO}/commits?path=${encodeURIComponent(REMOTE_PATH)}&per_page=1`, {
+      headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github+json" },
+    });
+    if (!r.ok) return { serial: 0, sha: remoteSha };
+    const [c] = (await r.json()) as { commit: { message: string } }[];
+    const serial = Number(/snapshot #(\d+)/.exec(c?.commit?.message ?? "")?.[1] ?? 0);
+    const meta = await api(`${REMOTE_PATH}?ref=HEAD`);
+    const sha = meta.ok ? ((await meta.json()) as { sha: string }).sha : remoteSha;
+    return { serial, sha };
+  } catch {
+    return { serial: 0, sha: remoteSha };
+  }
+}
+
+/** Another container wrote a newer snapshot: take theirs, ours is stale. */
+async function adoptRemote(serial: number) {
+  const r = await api(`${REMOTE_PATH}?ref=HEAD`);
+  if (!r.ok) return;
+  const meta = (await r.json()) as { sha: string; content?: string; download_url?: string };
+  const data = meta.content
+    ? Buffer.from(meta.content, "base64")
+    : Buffer.from(await (await fetch(meta.download_url!, { headers: { Authorization: `Bearer ${TOKEN}` } })).arrayBuffer());
+  const { resetConnection } = await import("./db");
+  resetConnection();
+  fs.writeFileSync(DB_FILE, data);
+  fs.rmSync(`${DB_FILE}-wal`, { force: true });
+  fs.rmSync(`${DB_FILE}-shm`, { force: true });
+  remoteSha = meta.sha;
+  dirty = false;
+  console.warn(`[backup] adopted a newer snapshot (#${serial}) written by another instance — local changes since boot were dropped`);
+}
 
 /** Downloads the newest snapshot. Runs before anything opens the database. */
 /** Reports which GitHub account the token belongs to — the usual cause of a 404 is the wrong account. */
@@ -90,41 +129,60 @@ let dirty = false;
 /** Called after every write. Uploads at most once per interval. */
 export function scheduleBackup() {
   if (!backupEnabled()) return;
+  if (!dirty && process.env.BACKUP_DEBUG === "1") console.log("[backup] change detected, snapshot scheduled");
   dirty = true;
   if (pending) return;
+  // Hold the first upload briefly so a container being replaced can flush its own final snapshot.
+  const wait = Math.max(INTERVAL, startedAt + FIRST_UPLOAD_DELAY - Date.now());
   pending = setTimeout(() => {
     pending = null;
     void uploadSnapshot();
-  }, INTERVAL);
+  }, wait);
 }
 
 export async function uploadSnapshot(reason = "change"): Promise<boolean> {
+  if (process.env.BACKUP_DEBUG === "1") console.log(`[backup] upload attempt (${reason}): enabled=${backupEnabled()} uploading=${uploading} dirty=${dirty}`);
   if (!backupEnabled() || uploading || !dirty) return false;
   uploading = true;
   dirty = false;
   try {
+    const { db, getSetting, setSetting } = await import("./db");
+    const ours = Number(getSetting(SERIAL_KEY, "0")) || 0;
+    const remote = await latestRemote();
+    if (remote.serial > ours) {
+      // Someone else (usually the container we are replacing) has newer data.
+      await adoptRemote(remote.serial);
+      return false;
+    }
+    const serial = Math.max(ours, remote.serial) + 1;
+    setSetting(SERIAL_KEY, String(serial));
+    remoteSha = remote.sha ?? remoteSha;
+
     // VACUUM INTO makes a consistent copy while the database is in use.
-    const { db } = await import("./db");
     fs.rmSync(SNAPSHOT_FILE, { force: true });
     db().exec(`VACUUM INTO '${SNAPSHOT_FILE.replace(/\\/g, "/").replace(/'/g, "''")}'`);
     const bytes = fs.readFileSync(SNAPSHOT_FILE);
     fs.rmSync(SNAPSHOT_FILE, { force: true });
 
     const body = {
-      message: `snapshot (${reason}) ${new Date().toISOString()}`,
+      message: `snapshot #${serial} (${reason}) ${new Date().toISOString()}`,
       content: bytes.toString("base64"),
       ...(remoteSha ? { sha: remoteSha } : {}),
     };
-    let r = await api(REMOTE_PATH, { method: "PUT", body: JSON.stringify(body) });
+    const r = await api(REMOTE_PATH, { method: "PUT", body: JSON.stringify(body) });
     if (r.status === 409 || r.status === 422) {
-      // Someone/something else wrote it — refresh the sha and retry once.
-      const cur = await api(`${REMOTE_PATH}?ref=HEAD`);
-      remoteSha = cur.ok ? ((await cur.json()) as { sha: string }).sha : null;
-      r = await api(REMOTE_PATH, { method: "PUT", body: JSON.stringify({ ...body, sha: remoteSha ?? undefined }) });
+      // The file moved under us: re-check the serial rather than overwriting blindly.
+      const again = await latestRemote();
+      if (again.serial >= serial) await adoptRemote(again.serial);
+      else {
+        remoteSha = again.sha;
+        dirty = true;
+      }
+      return false;
     }
     if (!r.ok) throw new Error(`GitHub ${r.status} ${await r.text()}`);
     remoteSha = ((await r.json()) as { content: { sha: string } }).content.sha;
-    console.log(`[backup] snapshot uploaded (${(bytes.length / 1024).toFixed(0)} KB, ${reason})`);
+    console.log(`[backup] snapshot #${serial} uploaded (${(bytes.length / 1024).toFixed(0)} KB, ${reason})`);
     return true;
   } catch (e) {
     dirty = true; // try again on the next change
