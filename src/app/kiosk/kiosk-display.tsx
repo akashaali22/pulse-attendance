@@ -11,7 +11,8 @@ export function KioskDisplay({ company, lanIps }: { company: string; lanIps: str
   const { t } = usePrefs();
   const [qr, setQr] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState(0);
-  const [now, setNow] = useState(() => Date.now());
+  // Rendered only after mount: the wall clock differs between server and browser.
+  const [now, setNow] = useState<number | null>(null);
   const [base, setBase] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -55,8 +56,8 @@ export function KioskDisplay({ company, lanIps }: { company: string; lanIps: str
     return () => clearInterval(id);
   }, []);
 
-  const left = Math.max(0, expiresAt - now);
-  const clock = new Date(now);
+  const left = now === null ? 0 : Math.max(0, expiresAt - now);
+  const clock = now === null ? null : new Date(now);
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center gap-8 p-6">
@@ -76,9 +77,9 @@ export function KioskDisplay({ company, lanIps }: { company: string; lanIps: str
 
       <div className="text-center">
         <div className="font-mono text-6xl font-semibold tracking-tight tabular sm:text-7xl">
-          {clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          {clock ? clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "--:--:--"}
         </div>
-        <div className="mt-1 text-muted">{clock.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}</div>
+        <div className="mt-1 text-muted">{clock ? clock.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" }) : " "}</div>
       </div>
 
       <div className="relative rounded-[28px] bg-white p-5 shadow-2xl shadow-accent/30">

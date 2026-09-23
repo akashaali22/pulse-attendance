@@ -56,7 +56,9 @@ export function ClockCard({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [phase, setPhase] = useState<string | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  // Start from the server's timestamp so the first client render matches the server HTML,
+  // then tick from the real clock. (A Date.now() seed here causes a hydration mismatch.)
+  const [now, setNow] = useState(state.renderedAt);
   const [selfieFor, setSelfieFor] = useState<PunchType | null>(null);
 
   const open = state.status === "WORKING" || state.status === "ON_BREAK";

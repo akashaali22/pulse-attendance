@@ -65,8 +65,8 @@ const ICONS = {
   profile: UserRound,
 };
 
-function timeAgo(ts: number) {
-  const s = Math.round((Date.now() - ts) / 1000);
+function timeAgo(ts: number, now: number) {
+  const s = Math.round((now - ts) / 1000);
   if (s < 60) return "just now";
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
@@ -89,6 +89,9 @@ export function Shell({
   const { t, theme, lang } = usePrefs();
   const path = usePathname();
   const [drawer, setDrawer] = useState(false);
+  // "5m ago" depends on the current clock, which the server does not share — fill it in after mount.
+  const [mountedAt, setMountedAt] = useState<number | null>(null);
+  useEffect(() => setMountedAt(Date.now()), []);
   const [palette, setPalette] = useState(false);
   const [bell, setBell] = useState(false);
   const [, start] = useTransition();
@@ -272,7 +275,7 @@ export function Shell({
                             <span className="block text-sm font-medium text-ink">{n.title}</span>
                             {n.body && <span className="block truncate text-xs text-muted">{n.body}</span>}
                           </span>
-                          <span className="shrink-0 text-[10px] text-muted">{timeAgo(n.created_at)}</span>
+                          <span className="shrink-0 text-[10px] text-muted">{mountedAt === null ? "" : timeAgo(n.created_at, mountedAt)}</span>
                         </Link>
                       </li>
                     ))}
