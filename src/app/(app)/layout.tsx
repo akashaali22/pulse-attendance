@@ -22,6 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/attendance", label: "My Attendance", icon: "calendar", group: "Workspace" },
     { href: "/leave", label: "Leave", icon: "leave", group: "Workspace" },
     { href: "/corrections", label: "Corrections", icon: "corrections", group: "Workspace" },
+    { href: "/apps", label: "Get the app", icon: "apps", group: "Workspace" },
     ...(mgr
       ? ([
           { href: "/team", label: "Team Live", icon: "team", group: "Manage" },

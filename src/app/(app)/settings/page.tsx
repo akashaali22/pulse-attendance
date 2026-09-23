@@ -89,7 +89,11 @@ export default async function SettingsPage() {
               <li>1:15 break notification; break is deducted automatically</li>
               <li>No internet → events are saved on the PC and sent when it reconnects</li>
             </ul>
-            <a href="/api/agent/download" className="btn btn-primary w-full">Download PulseAgent.exe</a>
+            <a href="/api/agent/download" className="btn btn-primary w-full">Download PulseAgent.exe (Windows)</a>
+            <p className="text-xs text-muted">
+              Mac: employees paste one line into Terminal — see <a href="/apps" className="text-accent">Get the app</a>,
+              which also covers phones.
+            </p>
             <p className="text-xs text-muted">
               Tip: put a text file named <span className="font-mono">server.txt</span> next to the exe containing this server address so employees do not need to type it.
             </p>

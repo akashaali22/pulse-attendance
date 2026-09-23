@@ -3,6 +3,8 @@
 import { chromium } from "playwright-core";
 
 const BASE = process.env.BASE ?? "http://localhost:3000";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@company.com";
+const ADMIN_PW = process.env.ADMIN_PW ?? "Admin@123";
 const dir = process.argv[2];
 const results = [];
 const check = (name, cond, extra = "") => {
@@ -24,7 +26,7 @@ const login = async (email, password) => {
 const row = (p, name) => p.locator("tbody tr", { hasText: name });
 
 // 1. Admin sets Omar's password
-const admin = await login("admin@company.com", "Admin@123");
+const admin = await login(ADMIN_EMAIL, ADMIN_PW);
 await admin.goto(`${BASE}/employees?q=Omar`);
 await row(admin, "Omar Farooq").getByRole("button", { name: "Update password" }).click();
 await admin.fill("input[autocomplete=new-password]", "Omar@2026");

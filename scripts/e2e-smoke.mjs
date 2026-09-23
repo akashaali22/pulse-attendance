@@ -4,6 +4,8 @@ import { chromium } from "playwright-core";
 import fs from "node:fs";
 
 const BASE = process.env.BASE ?? "http://localhost:3000";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@company.com";
+const ADMIN_PW = process.env.ADMIN_PW ?? "Admin@123";
 const shots = process.argv[2];
 if (shots) fs.mkdirSync(shots, { recursive: true });
 const results = [];
@@ -43,7 +45,7 @@ const toast = (page, re) => page.waitForSelector(`text=${re}`, { timeout: 15000 
   const r = await p.request.get(`${BASE}/api/export`);
   check("export API rejects anonymous", r.status() === 403);
   await p.goto(`${BASE}/login`);
-  await p.fill("#email", "admin@company.com");
+  await p.fill("#email", ADMIN_EMAIL);
   await p.fill("#password", "wrong");
   await p.click("button[type=submit]");
   check("wrong password rejected", await toast(p, "Invalid email or password"));
@@ -134,7 +136,7 @@ const mgr = await session("manager@demo.local", "Demo@1234");
 }
 
 // Admin: settings, audit, command palette, urdu
-const adm = await session("admin@company.com", "Admin@123");
+const adm = await session(ADMIN_EMAIL, ADMIN_PW);
 {
   const { page } = adm;
   await shot(page, "10-admin-dashboard");
