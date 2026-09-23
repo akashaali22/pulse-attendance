@@ -19,6 +19,7 @@
 /agent/obj/
 /agent/bin/*
 !/agent/bin/PulseAgent.exe
+!/agent/bin/PulseAgent.exe.sha256
 
 # env files
 .env*
