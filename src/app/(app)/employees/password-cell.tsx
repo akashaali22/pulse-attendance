@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Copy, Eye, EyeOff, KeyRound, Loader2, RefreshCw, X } from "lucide-react";
 import { revealPassword, setPasswordByAdmin } from "@/actions/admin";
 import { usePrefs } from "@/components/providers";
-import { Portal } from "@/components/portal";
+import { Dialog } from "@/components/dialog";
 
 function when(ts: number | null | undefined) {
   return ts ? new Date(ts).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : null;
@@ -95,9 +95,7 @@ export function SetPasswordButton({ userId, name, label }: { userId: number; nam
         <KeyRound className="size-3.5" /> {label}
       </button>
       {open && (
-        <Portal>
-          <div className="fixed inset-0 z-[80] grid place-items-center bg-black/60 p-4 backdrop-blur-sm" onClick={close}>
-            <div className="card rise w-full max-w-sm p-5 text-start shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <Dialog label="Update password" onClose={close} className="max-w-sm p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-ink">Update password</h3>
@@ -175,9 +173,7 @@ export function SetPasswordButton({ userId, name, label }: { userId: number; nam
                   </div>
                 </form>
               )}
-            </div>
-          </div>
-        </Portal>
+        </Dialog>
       )}
     </>
   );

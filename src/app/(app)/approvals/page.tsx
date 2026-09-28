@@ -1,3 +1,5 @@
+import { Briefing } from "@/components/ui";
+import { ListChecks as BriefingIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Check, X } from "lucide-react";
 import { managedUserFilter, requireUser } from "@/lib/auth";
@@ -49,7 +51,7 @@ export default async function ApprovalsPage() {
         promptNote="Reason"
         title={t("Reject")}
       >
-        <X className="size-3.5" />
+        <X className="size-3.5" /> {t("Reject")}
       </ActionButton>
     </div>
   );
@@ -59,14 +61,16 @@ export default async function ApprovalsPage() {
   return (
     <>
       <PageHeader title={t("Approvals")} subtitle={`${pendingCount} ${t("pending")}`} />
+      <Briefing eyebrow={t("Review centre")} title={pendingCount ? t("Your team is waiting on you.") : t("You are all caught up.")} description={t("Review leave and attendance corrections with the full context.")} icon={<BriefingIcon />} tone={pendingCount ? "warn" : "good"} metrics={[{ label: t("Pending approvals"), value: pendingCount }, { label: t("Leave"), value: leaves.filter(l => l.status === "pending").length }, { label: t("Corrections"), value: fixes.filter(f => f.status === "pending").length }]} />
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card title={t("Leave")}>
           {leaves.length === 0 ? (
             <Empty text={t("No records")} />
           ) : (
-            <ul className="divide-y divide-line">
+            <ul className="review-list">
               {leaves.map((l) => (
-                <li key={l.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
+                <li key={l.id} data-status={l.status} className="review-item flex flex-wrap items-center gap-3">
                   <Avatar name={l.name} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -79,7 +83,7 @@ export default async function ApprovalsPage() {
                       {l.start_date}
                       {l.end_date !== l.start_date && ` → ${l.end_date}`} · {l.days} {t("days")}
                     </div>
-                    <div className="mt-1 text-xs text-ink-2">“{l.reason}”</div>
+                    <blockquote className="review-reason">{l.reason}</blockquote>
                   </div>
                   {l.status === "pending" ? decide("leave", l.id) : <StatusBadge status={l.status} label={t(l.status)} />}
                 </li>
@@ -91,16 +95,16 @@ export default async function ApprovalsPage() {
           {fixes.length === 0 ? (
             <Empty text={t("No records")} />
           ) : (
-            <ul className="divide-y divide-line">
+            <ul className="review-list">
               {fixes.map((x) => (
-                <li key={x.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
+                <li key={x.id} data-status={x.status} className="review-item flex flex-wrap items-center gap-3">
                   <Avatar name={x.name} />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold">{x.name}</div>
                     <div className="text-xs text-muted tabular">
                       {x.work_date} · {x.check_in ?? "—"} → {x.check_out ?? "—"}
                     </div>
-                    <div className="mt-1 text-xs text-ink-2">“{x.reason}”</div>
+                    <blockquote className="review-reason">{x.reason}</blockquote>
                   </div>
                   {x.status === "pending" ? decide("fix", x.id) : <StatusBadge status={x.status} label={t(x.status)} />}
                 </li>

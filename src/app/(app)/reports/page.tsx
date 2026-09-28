@@ -1,3 +1,6 @@
+import { Briefing } from "@/components/ui";
+import { ChartNoAxesCombined as BriefingIcon } from "lucide-react";
+import { DataTable } from "@/components/data-table";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { FileSpreadsheet, FileText } from "lucide-react";
@@ -47,6 +50,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           <FileText className="size-4" /> {t("Download CSV")}
         </Link>
       </PageHeader>
+      <Briefing eyebrow={t("Workforce intelligence")} title={t("See the pattern behind the hours.")} description={t("Turn attendance records into a clear picture of your workforce.")} icon={<BriefingIcon />} tone="info" metrics={[{ label: t("Worked"), value: fmtDuration(agg.worked) }, { label: t("Attendance rate"), value: avgRate.toFixed(1) + "%" }]} />
+
 
       <form className="card mb-4 flex flex-wrap items-end gap-3 p-4">
         <label>
@@ -82,7 +87,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         {report.summary.length === 0 ? (
           <Empty text={t("No records")} />
         ) : (
-          <div className="overflow-x-auto">
+          <DataTable>
             <table className="data">
               <thead>
                 <tr>
@@ -134,7 +139,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 ))}
               </tbody>
             </table>
-          </div>
+          </DataTable>
         )}
       </Card>
     </>

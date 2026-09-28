@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Isolate verification builds from a running local server's output.
+  distDir: process.env.PULSE_DIST_DIR || ".next",
   // Self-contained server bundle for the Docker image.
   output: "standalone",
   // The download routes read these off disk at request time, so nothing in the code points at them

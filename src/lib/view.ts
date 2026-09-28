@@ -9,14 +9,15 @@ interface ShiftTimes {
   name: string;
   start_time: string;
   end_time: string;
+  full_day_minutes: number;
   break_start: string | null;
   break_end: string | null;
 }
 
 function shiftFor(shiftId: number | null): ShiftTimes | undefined {
   return get<ShiftTimes>(
-    `SELECT name, start_time, end_time, break_start, break_end FROM shifts WHERE id = ?
-     UNION ALL SELECT name, start_time, end_time, break_start, break_end FROM (SELECT * FROM shifts ORDER BY is_default DESC, id LIMIT 1)
+    `SELECT name, start_time, end_time, full_day_minutes, break_start, break_end FROM shifts WHERE id = ?
+     UNION ALL SELECT name, start_time, end_time, full_day_minutes, break_start, break_end FROM (SELECT * FROM shifts ORDER BY is_default DESC, id LIMIT 1)
      LIMIT 1`,
     shiftId ?? -1,
   );
@@ -29,6 +30,7 @@ export function toClockState(d: DayResult, tz: string, shiftId: number | null): 
   return {
     status: d.status,
     workedMin: d.workedMin,
+    targetMin: s?.full_day_minutes ?? 480,
     breakMin: d.breakMin,
     firstIn: fmtTime(d.firstIn, tz),
     lastOut: open ? "—" : fmtTime(d.lastOut, tz),

@@ -8,7 +8,7 @@ import { usePrefs } from "@/components/providers";
 import { Logo } from "@/components/logo";
 
 export function KioskDisplay({ company, lanIps }: { company: string; lanIps: string[] }) {
-  const { t } = usePrefs();
+  const { t, lang } = usePrefs();
   const [qr, setQr] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState(0);
   // Rendered only after mount: the wall clock differs between server and browser.
@@ -60,48 +60,40 @@ export function KioskDisplay({ company, lanIps }: { company: string; lanIps: str
   const clock = now === null ? null : new Date(now);
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center gap-8 p-6">
-      <div className="absolute start-4 top-4 flex gap-2">
-        <Link href="/dashboard" className="btn btn-ghost btn-sm"><ArrowLeft className="size-4 rtl:rotate-180" /></Link>
-        <button className="btn btn-ghost btn-sm" onClick={() => document.documentElement.requestFullscreen?.()} aria-label="Fullscreen">
-          <Maximize2 className="size-4" />
-        </button>
-      </div>
-      <div className="flex items-center gap-3">
-        <Logo className="size-11" />
-        <div>
-          <div className="text-xl font-semibold">{company}</div>
-          <div className="text-sm text-muted">{t("Scan to check in")}</div>
+    <main className="kiosk-stage">
+      <header className="kiosk-top">
+        <div className="flex items-center gap-3"><Logo className="size-11" /><div><strong className="block text-lg">{company}</strong><span className="eyebrow mt-1 text-muted">Pulse · {t("Attendance terminal")}</span></div></div>
+        <div className="flex gap-2">
+          <Link href="/dashboard" aria-label={t("Dashboard")} className="btn btn-ghost btn-sm"><ArrowLeft className="size-4 rtl:rotate-180" /></Link>
+          <button className="btn btn-ghost btn-sm" onClick={() => document.documentElement.requestFullscreen?.()} aria-label={t("Fullscreen")}><Maximize2 className="size-4" /></button>
         </div>
+      </header>
+      <div className="kiosk-layout">
+        <section className="kiosk-welcome">
+          <div className="eyebrow text-accent"><span className="signal-mark" aria-hidden><i /><i /><i /></span>{t("Your day starts here")}</div>
+          <h1>{t("A great day.")}<br /><span>{t("One simple scan.")}</span></h1>
+          <p>{t("Scan the code with your phone, then confirm your attendance in your workspace.")}</p>
+          <div className="kiosk-clock">
+            <time className="tabular" suppressHydrationWarning>{clock ? clock.toLocaleTimeString(lang === "ur" ? "ur-PK" : "en-GB", { hour: "2-digit", minute: "2-digit" }) : "--:--"}</time>
+            <span>{clock ? clock.toLocaleDateString(lang === "ur" ? "ur-PK" : "en-GB", { weekday: "long", day: "numeric", month: "long" }) : " "}</span>
+          </div>
+          <ol className="kiosk-steps"><li><span>01</span>{t("Open your phone camera")}</li><li><span>02</span>{t("Scan to open your workspace")}</li><li><span>03</span>{t("Confirm your check-in")}</li></ol>
+        </section>
+        <section className="kiosk-console" aria-label={t("Scan to check in")}>
+          <div className="kiosk-console-top"><span className="eyebrow">{t("Scan to check in")}</span><span className="flex items-center gap-2 text-xs"><span className={`size-1.5 rounded-full ${error ? "bg-warn" : qr ? "bg-good" : "bg-muted"}`} />{t(error ? "Reconnecting…" : qr ? "Connected" : "Connecting…")}</span></div>
+          <div className="kiosk-scan-area">
+            <div className="kiosk-qr">
+              {qr ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={expiresAt} src={qr} alt="Check-in QR code" className="qr-enter" />
+              ) : <div className="kiosk-qr-placeholder skeleton" />}
+            </div>
+          </div>
+          <div className="kiosk-refresh"><div className="flex items-center justify-between gap-3"><span>{t("Code refreshes every 15 seconds")}</span><strong className="tabular">{Math.ceil(left / 1000)}s</strong></div><div className="kiosk-refresh-track"><div className="progress-fill" style={{ transform: `scaleX(${Math.min(1, left / 15000)})` }} /></div></div>
+          {error && <p role="alert" className="px-6 pb-4 text-center text-sm text-bad">{error}</p>}
+        </section>
       </div>
-
-      <div className="text-center">
-        <div className="font-mono text-6xl font-semibold tracking-tight tabular sm:text-7xl">
-          {clock ? clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "--:--:--"}
-        </div>
-        <div className="mt-1 text-muted">{clock ? clock.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" }) : " "}</div>
-      </div>
-
-      <div className="relative rounded-[28px] bg-white p-5 shadow-2xl shadow-accent/30">
-        <div className="absolute -inset-[3px] -z-10 rounded-[30px] bg-gradient-to-br from-accent to-accent-2 opacity-80 blur-sm" />
-        {qr ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={qr} alt="Check-in QR code" className="size-[min(70vw,380px)]" />
-        ) : (
-          <div className="size-[min(70vw,380px)] animate-pulse rounded-xl bg-slate-200" />
-        )}
-      </div>
-
-      <div className="w-[min(70vw,380px)]">
-        <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-          <div className="h-full rounded-full bg-gradient-to-r from-accent to-accent-2 transition-[width] duration-200" style={{ width: `${(left / 15000) * 100}%` }} />
-        </div>
-        <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted">
-          <ShieldCheck className="size-3.5 text-good" /> {t("Code refreshes every 15 seconds")}
-        </p>
-        {error && <p className="mt-2 text-center text-sm text-bad">{error}</p>}
-        <p className="mt-2 text-center font-mono text-[11px] text-muted">{base}</p>
-      </div>
+      <footer className="kiosk-footer"><span className="flex items-center gap-2"><ShieldCheck className="size-4 text-accent" />{t("A fresh code. A verified arrival.")}</span><span className="font-mono text-[10px]">{base}</span></footer>
     </main>
   );
 }

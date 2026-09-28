@@ -1,3 +1,8 @@
+import { Briefing } from "@/components/ui";
+import { TeamRoster } from "@/components/team-roster";
+import { Radio as BriefingIcon } from "lucide-react";
+import { DataTable } from "@/components/data-table";
+import { LiveRefresh } from "@/components/live-refresh";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Camera, MapPin, QrCode, ShieldAlert } from "lucide-react";
@@ -38,7 +43,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHeader title={t("Team Live")} subtitle={date === today ? t("Today") : date}>
+      <PageHeader title={t("Team Live")} subtitle={date === today ? t("Review attendance and availability across your team.") : date}>
         <form className="flex flex-wrap gap-2">
           <input type="date" name="date" defaultValue={date} max={today} className="input w-auto" />
           <select name="dept" defaultValue={dept ?? ""} className="input w-auto">
@@ -50,8 +55,11 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           <button className="btn btn-ghost">{t("Filter")}</button>
         </form>
       </PageHeader>
+      <Briefing eyebrow={t("Workforce signal")} title={t("Your people. In real time.")} description={date === today ? t("A live view of availability, working time and attendance exceptions.") : date} icon={<BriefingIcon />} metrics={[{ label: t("Working now"), value: rows.filter(r => r.d.status === "WORKING").length }, { label: t("On break"), value: rows.filter(r => r.d.status === "ON_BREAK").length }, { label: t("Employees"), value: rows.length }]} />
 
-      <div className="mb-4 flex flex-wrap gap-2">
+
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        {date === today && <LiveRefresh />}
         <Link href={filterHref()} className={`btn btn-sm ${!sp.status ? "btn-primary" : "btn-ghost"}`}>{t("All")} · {people.length}</Link>
         {Object.entries(counts).map(([s, n]) => (
           <Link key={s} href={filterHref(s)} className={`btn btn-sm ${sp.status === s ? "btn-primary" : "btn-ghost"}`}>
@@ -61,11 +69,17 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
         <Link href={filterHref("LATE")} className={`btn btn-sm ${sp.status === "LATE" ? "btn-primary" : "btn-ghost"}`}>{t("Late")}</Link>
       </div>
 
+      <TeamRoster people={rows.map(({ p, d, ps }) => ({
+        id: p.id, name: p.name, code: p.emp_code, department: p.department ?? "—", status: d.status,
+        worked: fmtDuration(d.workedMin), firstIn: fmtTime(d.firstIn, tz), sources: [...new Set(ps.map(x => x.source))].join(" · "),
+        href: `/attendance?user=${p.id}&month=${date.slice(0, 7)}`,
+        action: p.id !== me.id ? <EditDay userId={p.id} name={p.name} date={date} inT={d.firstIn ? minutesToHhmm(localMinutes(d.firstIn, tz)) : ""} outT={d.lastOut && d.status !== "WORKING" && d.status !== "ON_BREAK" ? minutesToHhmm(localMinutes(d.lastOut, tz)) : ""} /> : null,
+      }))}>
       <Card>
         {rows.length === 0 ? (
           <Empty text={t("No records")} />
         ) : (
-          <div className="overflow-x-auto">
+          <DataTable>
             <table className="data">
               <thead>
                 <tr>
@@ -75,7 +89,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
                   <th>{t("Last out")}</th>
                   <th>{t("Worked")}</th>
                   <th>{t("Late")}</th>
-                  <th>Evidence</th>
+                  <th>{t("Evidence")}</th>
                   <th />
                 </tr>
               </thead>
@@ -137,9 +151,10 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
                 })}
               </tbody>
             </table>
-          </div>
+          </DataTable>
         )}
       </Card>
+      </TeamRoster>
     </>
   );
 }

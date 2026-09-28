@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import clsx from "clsx";
 import { usePrefs } from "./providers";
 import { STATUS_STYLE } from "./ui";
@@ -32,7 +32,7 @@ export function TrendBars({ data, height = 220 }: { data: TrendPoint[]; height?:
   const { t } = usePrefs();
   const [hover, setHover] = useState<number | null>(null);
   const max = Math.max(1, ...data.map((d) => SERIES.reduce((s, k) => s + d[k.key], 0)));
-  const ticks = [0, Math.round(max / 2), max];
+  const ticks = [...new Set([0, Math.round(max / 2), max])];
   const h = height;
   const pad = { top: 8, bottom: 24, left: 28 };
   const plotH = h - pad.top - pad.bottom;
@@ -50,11 +50,11 @@ export function TrendBars({ data, height = 220 }: { data: TrendPoint[]; height?:
           </div>
         );
       })}
-      <div className="absolute flex" style={{ left: pad.left, right: 0, top: pad.top, height: plotH }}>
+      <div className="absolute flex" style={{ insetInlineStart: pad.left, insetInlineEnd: 0, top: pad.top, height: plotH }}>
         {data.map((d, i) => {
           let acc = 0;
           return (
-            <div key={d.date} className="relative flex h-full flex-col-reverse items-center" style={{ width: `${colW}%` }} onMouseEnter={() => setHover(i)}>
+            <div key={d.date} tabIndex={0} aria-label={`${d.date}: ${SERIES.map(s => `${t(s.label)} ${d[s.key]}`).join(", ")}`} onFocus={() => setHover(i)} onBlur={() => setHover(null)} onClick={() => setHover(i)} className="relative flex h-full flex-col-reverse items-center" style={{ width: `${colW}%` }} onMouseEnter={() => setHover(i)}>
               {hover === i && <div className="absolute inset-0 rounded-md bg-accent-soft" />}
               <div className="relative flex h-full w-[58%] max-w-7 flex-col-reverse gap-[2px]">
                 {SERIES.map((s) => {
@@ -66,12 +66,12 @@ export function TrendBars({ data, height = 220 }: { data: TrendPoint[]; height?:
                     <div
                       key={s.key}
                       style={{ height: `calc(${(v / max) * 100}% - 2px)`, background: s.color }}
-                      className={clsx("w-full", top ? "rounded-t-[4px]" : "")}
+                      className={clsx("chart-bar w-full", top ? "rounded-t-[4px]" : "")}
                     />
                   );
                 })}
               </div>
-              <span className="absolute -bottom-5 text-[10px] text-muted tabular">{data.length <= 16 || i % 2 === 0 ? shortDate(d.date) : ""}</span>
+              <span className="absolute -bottom-5 text-[10px] text-muted tabular">{data.length <= 7 || i % Math.ceil(data.length / 7) === 0 ? shortDate(d.date) : ""}</span>
             </div>
           );
         })}
@@ -81,8 +81,8 @@ export function TrendBars({ data, height = 220 }: { data: TrendPoint[]; height?:
           className="glass pointer-events-none absolute z-10 min-w-40 rounded-xl p-3 text-xs shadow-xl"
           style={{
             top: 0,
-            left: `calc(${pad.left}px + (100% - ${pad.left}px) * ${(hover + 0.5) / data.length})`,
-            transform: hover > data.length / 2 ? "translateX(-105%)" : "translateX(8%)",
+            insetInlineEnd: 0,
+            maxWidth: "min(220px, 80%)",
           }}
         >
           <div className="mb-1.5 font-semibold text-ink">{data[hover].date}</div>
@@ -113,7 +113,7 @@ export function RateBars({ rows }: { rows: { label: string; value: number; sub?:
             </span>
           </div>
           <div className="h-2 rounded-full bg-surface-2">
-            <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${Math.min(100, r.value)}%`, background: "var(--info)" }} />
+            <div className="progress-fill h-full rounded-full" style={{ transform: `scaleX(${Math.max(0, Math.min(100, r.value)) / 100})`, background: "var(--accent)" }} />
           </div>
         </li>
       ))}
@@ -123,6 +123,7 @@ export function RateBars({ rows }: { rows: { label: string; value: number; sub?:
 
 /** Circular gauge for one headline percentage. */
 export function Ring({ value, size = 120, label }: { value: number; size?: number; label?: string }) {
+  const id = useId();
   const r = size / 2 - 8;
   const c = 2 * Math.PI * r;
   const v = Math.max(0, Math.min(100, value));
@@ -135,15 +136,15 @@ export function Ring({ value, size = 120, label }: { value: number; size?: numbe
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="url(#ringGrad)"
+          stroke={`url(#${id})`}
           strokeWidth="8"
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - v / 100)}
-          style={{ transition: "stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1)" }}
+          className="clock-progress"
         />
         <defs>
-          <linearGradient id="ringGrad" x1="0" x2="1">
+          <linearGradient id={id} x1="0" x2="1">
             <stop offset="0" stopColor="var(--accent)" />
             <stop offset="1" stopColor="var(--accent-2)" />
           </linearGradient>
@@ -169,6 +170,8 @@ export interface HeatDay {
 export function MonthHeatmap({ days, weekStart = 1 }: { days: HeatDay[]; weekStart?: 0 | 1 }) {
   const { t } = usePrefs();
   const [hover, setHover] = useState<HeatDay | null>(null);
+  const [selected, setSelected] = useState<HeatDay | null>(null);
+  const active = days.find(day => day.date === (hover ?? selected)?.date);
   if (days.length === 0) return null;
   const [y, m] = days[0].date.split("-").map(Number);
   const firstDow = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
@@ -185,10 +188,10 @@ export function MonthHeatmap({ days, weekStart = 1 }: { days: HeatDay[]; weekSta
     HOLIDAY: "var(--accent)",
   };
   return (
-    <div>
+    <div key={days[0].date} className="rise">
       <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-medium text-muted">
         {names.map((n) => (
-          <div key={n}>{n}</div>
+          <div key={n}>{t(n)}</div>
         ))}
         {Array.from({ length: lead }).map((_, i) => (
           <div key={`l${i}`} />
@@ -201,30 +204,36 @@ export function MonthHeatmap({ days, weekStart = 1 }: { days: HeatDay[]; weekSta
               key={d.date}
               onMouseEnter={() => setHover(d)}
               onFocus={() => setHover(d)}
+              onBlur={() => setHover(null)}
+              onClick={() => setSelected(v => v?.date === d.date ? null : d)}
+              onKeyDown={event => { if (event.key === "Escape") { setSelected(null); setHover(null); } }}
+              aria-pressed={selected?.date === d.date}
               onMouseLeave={() => setHover(null)}
               className={clsx(
-                "relative aspect-square rounded-lg border text-[11px] font-medium tabular transition hover:scale-105",
-                bg ? "border-transparent text-white" : "border-line text-muted",
+                "heat-cell relative aspect-square border text-[11px] font-medium tabular",
+                bg ? "border-transparent" : "border-line text-muted",
               )}
-              style={bg ? { background: `color-mix(in oklab, ${bg} 82%, transparent)` } : undefined}
-              aria-label={`${d.date}: ${t(d.status)}`}
+              style={bg ? { background: `color-mix(in srgb, ${bg} 14%, var(--surface))`, color: bg, borderColor: `color-mix(in srgb, ${bg} 25%, transparent)` } : undefined}
+              aria-label={`${d.date}: ${t(d.status)}${d.late ? `, ${t("Late")}` : ""}, ${d.worked}`}
             >
               {Number(d.date.slice(8))}
-              {d.late && <span className="absolute end-1 top-1 size-1.5 rounded-full bg-white" />}
+              {d.late && <span className="absolute end-1 top-1 size-1.5 rounded-full bg-warn" />}
             </button>
           );
         })}
       </div>
-      <div className="mt-3 h-10 text-xs">
-        {hover ? (
+      <div className="heat-detail text-xs" aria-live="polite">
+        {active ? (
           <div className="flex flex-wrap items-center gap-2 text-ink-2">
-            <span className="font-semibold text-ink">{hover.date}</span>
-            <span className={clsx("rounded-full border px-2 py-0.5", STATUS_STYLE[hover.status].chip)}>{t(hover.status)}</span>
-            {hover.late && <span className="text-warn">{t("Late")}</span>}
-            <span>{hover.inOut}</span>
-            <span className="text-muted">· {hover.worked}</span>
+            <span className="font-semibold text-ink">{active.date}</span>
+            <span className={clsx("rounded-full border px-2 py-0.5", STATUS_STYLE[active.status].chip)}>{t(active.status)}</span>
+            {active.late && <span className="text-warn">{t("Late")}</span>}
+            <span>{active.inOut}</span>
+            <span className="text-muted">· {active.worked}</span>
           </div>
-        ) : (
+        ) : <p className="text-muted">{t("Select a day to explore its timeline.")}</p>}
+      </div>
+      <div className="mt-3">
           <Legend
             items={[
               { label: "PRESENT", color: "var(--good)" },
@@ -235,7 +244,6 @@ export function MonthHeatmap({ days, weekStart = 1 }: { days: HeatDay[]; weekSta
               { label: "HOLIDAY", color: "var(--accent)" },
             ]}
           />
-        )}
       </div>
     </div>
   );

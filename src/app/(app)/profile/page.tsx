@@ -1,3 +1,5 @@
+import { Briefing } from "@/components/ui";
+import { Fingerprint as BriefingIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
 import { all, get } from "@/lib/db";
@@ -39,6 +41,8 @@ export default async function ProfilePage() {
   return (
     <>
       <PageHeader title={t("Profile")} />
+      <Briefing eyebrow={t("Your workspace identity")} title={t("A workspace that knows you.")} description={t("Your work details, account security and active sessions.")} icon={<BriefingIcon />} metrics={[{ label: t("Employee code"), value: me.emp_code }, { label: t("Active sessions"), value: sessions.length }]} />
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <div className="flex items-center gap-4 border-b border-line p-5">

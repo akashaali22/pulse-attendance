@@ -1,12 +1,13 @@
 "use client";
 
-import { createContext, useContext, useRef, useState, useTransition } from "react";
+import { createContext, useContext, useId, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import clsx from "clsx";
 import type { ActionResult } from "@/lib/notify";
 import { usePrefs } from "./providers";
+import { Dialog } from "./dialog";
 
 /** Form bound to a server action; toasts the result and resets on success. */
 export function ActionForm({
@@ -61,14 +62,9 @@ export function SubmitButton({ children, className, pendingText }: { children: R
   const formPending = useFormStatus().pending;
   const pending = useContext(PendingContext) || formPending;
   return (
-    <button type="submit" disabled={pending} className={clsx("btn btn-primary", className)}>
-      {pending ? (
-        <>
-          <Loader2 className="size-4 animate-spin" /> {pendingText}
-        </>
-      ) : (
-        children
-      )}
+    <button type="submit" disabled={pending} aria-busy={pending} className={clsx("btn btn-primary relative", className)}>
+      <span className={clsx("inline-flex items-center gap-2", pending && "opacity-0")}>{children}</span>
+      {pending && <span className="absolute inset-0 flex items-center justify-center gap-2"><Loader2 className="size-4 animate-spin" />{pendingText}</span>}
     </button>
   );
 }
@@ -91,31 +87,32 @@ export function ActionButton({
   const { t, toast } = usePrefs();
   const router = useRouter();
   const [pending, start] = useTransition();
-  return (
-    <button
-      type="button"
-      title={title}
-      disabled={pending}
-      className={className}
-      onClick={() => {
-        let note = "";
-        if (promptNote) {
-          const v = window.prompt(t(promptNote));
-          if (v === null) return;
-          note = v;
-        } else if (confirm && !window.confirm(t(confirm))) return;
-        start(async () => {
-          const r = await run(note);
-          if (r.ok && r.message && /password:/i.test(r.message)) window.alert(r.message);
-          else if (r.ok) toast(t(r.message ?? "Saved successfully"));
-          else toast(t(r.error), "error");
-          router.refresh();
-        });
-      }}
-    >
-      {pending ? <Loader2 className="size-3.5 animate-spin" /> : children}
+  const [ask, setAsk] = useState(false);
+  const [note, setNote] = useState("");
+  const execute = () => start(async () => {
+    const r = await run(note);
+    if (r.ok && r.message && /password:/i.test(r.message)) window.alert(r.message);
+    else if (r.ok) toast(t(r.message ?? "Saved successfully"));
+    else toast(t(r.error), "error");
+    if (r.ok) { setAsk(false); setNote(""); }
+    router.refresh();
+  });
+  return <>
+    <button type="button" title={title} aria-label={title ?? (confirm ? t(confirm) : promptNote ? t(promptNote) : undefined)} disabled={pending} aria-busy={pending} className={clsx(className, "relative")} onClick={() => { if (confirm || promptNote) { setNote(""); setAsk(true); } else execute(); }}>
+      <span className={clsx("inline-flex items-center gap-1.5", pending && "opacity-0")}>{children}</span>
+      {pending && <Loader2 className="absolute size-3.5 animate-spin" />}
     </button>
-  );
+    {ask && <Dialog label={t(promptNote ?? confirm ?? "Confirm")} onClose={() => { if (!pending) setAsk(false); }} className="max-w-md p-6">
+      <form onSubmit={e => { e.preventDefault(); if (!pending) execute(); }}>
+        <h2 className="text-lg font-semibold">{t(promptNote ?? confirm ?? "Confirm")}</h2>
+        {promptNote && <label className="mt-4 block"><span className="label">{t(promptNote)}</span><textarea className="input min-h-24" value={note} onChange={e => setNote(e.target.value)} autoFocus /></label>}
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => setAsk(false)}>{t("Cancel")}</button>
+          <button type="submit" className="btn btn-primary" disabled={pending}>{pending && <Loader2 className="size-4 animate-spin" />}{t("Confirm")}</button>
+        </div>
+      </form>
+    </Dialog>}
+  </>;
 }
 
 export function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
@@ -132,12 +129,23 @@ export function Field({ label, children, className }: { label: string; children:
 export function Tabs({ tabs }: { tabs: { id: string; label: string; content: React.ReactNode }[] }) {
   const { t } = usePrefs();
   const [active, setActive] = useState(tabs[0]?.id);
+  const id = useId();
+  const { lang } = usePrefs();
   return (
     <div>
-      <div className="mb-4 flex gap-1 overflow-x-auto rounded-2xl border border-line bg-surface p-1">
+      <div role="tablist" aria-label={t("Settings")} className="tabs-list mb-5 flex overflow-x-auto p-1">
         {tabs.map((tb) => (
           <button
             key={tb.id}
+            id={`${id}-${tb.id}-tab`} role="tab" aria-selected={active === tb.id} aria-controls={`${id}-${tb.id}-panel`} tabIndex={active === tb.id ? 0 : -1}
+            onKeyDown={e => {
+              const direction = lang === "ur" ? -1 : 1;
+              const delta = e.key === "ArrowRight" ? direction : e.key === "ArrowLeft" ? -direction : 0;
+              if (!delta && e.key !== "Home" && e.key !== "End") return;
+              e.preventDefault();
+              const next = e.key === "Home" ? tabs[0] : e.key === "End" ? tabs[tabs.length - 1] : tabs[(tabs.findIndex(x => x.id === active) + delta + tabs.length) % tabs.length];
+              setActive(next.id); document.getElementById(`${id}-${next.id}-tab`)?.focus();
+            }}
             type="button"
             onClick={() => setActive(tb.id)}
             className={clsx(
@@ -150,7 +158,7 @@ export function Tabs({ tabs }: { tabs: { id: string; label: string; content: Rea
         ))}
       </div>
       {tabs.map((tb) => (
-        <div key={tb.id} hidden={tb.id !== active}>
+        <div key={tb.id} id={`${id}-${tb.id}-panel`} role="tabpanel" aria-labelledby={`${id}-${tb.id}-tab`} className="tab-panel" hidden={tb.id !== active}>
           {tb.content}
         </div>
       ))}

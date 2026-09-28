@@ -1,3 +1,6 @@
+import { Briefing } from "@/components/ui";
+import { CalendarRange as BriefingIcon } from "lucide-react";
+import { DataTable } from "@/components/data-table";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ChevronLeft, ChevronRight, FilePen } from "lucide-react";
@@ -61,6 +64,8 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
           <ChevronRight className="size-4 rtl:rotate-180" />
         </Link>
       </PageHeader>
+      <Briefing eyebrow={t("Attendance journal")} title={t("Every hour has a story.")} description={t("Your attendance, punctuality and working time in one clear record.")} icon={<BriefingIcon />} metrics={[{ label: t("Attendance rate"), value: s.attendanceRate + "%" }, { label: t("Punctuality"), value: s.punctualityRate + "%" }]} />
+
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         <StatCard label={t("PRESENT")} value={s.present} tone="good" />
@@ -102,7 +107,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
           </Card>
         </div>
         <Card>
-          <div className="overflow-x-auto">
+          <DataTable>
             <table className="data">
               <thead>
                 <tr>
@@ -149,7 +154,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
                 ))}
               </tbody>
             </table>
-          </div>
+          </DataTable>
         </Card>
       </div>
     </>

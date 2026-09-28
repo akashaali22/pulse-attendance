@@ -8,11 +8,12 @@ import { punch, type PunchPayload } from "@/actions/punch";
 import type { DayStatus, PunchType } from "@/lib/engine";
 import { usePrefs } from "./providers";
 import { StatusBadge } from "./ui";
-import { Portal } from "./portal";
+import { Dialog } from "./dialog";
 
 export interface ClockState {
   status: DayStatus;
   workedMin: number;
+  targetMin: number;
   breakMin: number;
   firstIn: string;
   lastOut: string;
@@ -84,7 +85,7 @@ export function ClockCard({
     }
   }
   const workedSec = state.workedMin * 60 + Math.max(0, elapsed);
-  const target = 8 * 3600;
+  const target = Math.max(1, state.targetMin) * 60;
   const pct = Math.min(100, (workedSec / target) * 100);
   const live = status === "WORKING";
 
@@ -125,11 +126,11 @@ export function ClockCard({
   const busy = pending || !!phase;
 
   return (
-    <div className={clsx("card relative overflow-hidden rise", compact ? "p-5" : "p-6")}>
-      <div
-        className="pointer-events-none absolute -end-24 -top-24 size-72 rounded-full opacity-60 blur-3xl"
-        style={{ background: live ? "color-mix(in oklab, var(--good) 25%, transparent)" : "var(--glow)" }}
-      />
+    <div data-live={live} className={clsx("clock-hero card relative overflow-hidden rise", compact ? "p-5" : "p-6")}>
+      <div className="clock-heading">
+        <div className="eyebrow"><span className="signal-mark" aria-hidden><i /><i /><i /></span>{t("Your working day")}</div>
+        <h2 key={status}>{t(live ? "You're on the clock." : onBreak ? "A moment to recharge." : workedSec > 0 ? "Your time, accounted for." : "Ready when you are.")}</h2>
+      </div>
       <div className="relative flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <StatusBadge status={status} label={inAutoBreak ? t("Lunch break") : t(status)} />
@@ -141,35 +142,35 @@ export function ClockCard({
       </div>
 
       <div className="relative mt-6 flex flex-col items-center">
-        <div className="relative grid size-52 place-items-center">
+        <div className="clock-orbit relative grid size-52 place-items-center">
           <svg className="absolute inset-0 -rotate-90" viewBox="0 0 200 200" aria-hidden>
+            <circle cx="100" cy="100" r="98" fill="none" stroke="var(--muted)" strokeOpacity=".35" strokeWidth="2" strokeDasharray="1 9.26" />
             <circle cx="100" cy="100" r="90" fill="none" stroke="var(--surface-2)" strokeWidth="10" />
             <circle
               cx="100"
               cy="100"
               r="90"
               fill="none"
-              stroke="url(#clockGrad)"
+              className="clock-progress"
+              stroke="var(--accent)"
               strokeWidth="10"
               strokeLinecap="round"
               strokeDasharray={2 * Math.PI * 90}
               strokeDashoffset={2 * Math.PI * 90 * (1 - pct / 100)}
-              style={{ transition: "stroke-dashoffset .8s ease" }}
+
             />
-            <defs>
-              <linearGradient id="clockGrad" x1="0" x2="1" y1="0" y2="1">
-                <stop offset="0" stopColor="var(--accent)" />
-                <stop offset="1" stopColor="var(--accent-2)" />
-              </linearGradient>
-            </defs>
+            <circle cx="100" cy="100" r="77" fill="none" stroke="var(--border)" strokeWidth="1" strokeDasharray="1 6" />
+            <circle cx="100" cy="100" r="72" fill="none" stroke="var(--warn)" strokeOpacity=".65" strokeWidth="2" strokeDasharray={`${Math.min(1, state.breakMin / Math.max(1, state.targetMin)) * 452.39} 452.39`} />
           </svg>
           <div className="text-center">
-            <div className="font-mono text-4xl font-semibold tracking-tight tabular">{fmtClock(workedSec)}</div>
+            <div dir="ltr" className="font-mono text-[32px] font-semibold tracking-tight tabular">{fmtClock(workedSec)}</div>
             <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-muted">{t("Worked today")}</div>
           </div>
         </div>
 
-        <div className="mt-6 grid w-full grid-cols-3 gap-2 text-center">
+        <div className="clock-target"><span className="tabular">{Math.round(pct)}%</span><span>{t("of daily target")}</span><span className="clock-target-line" aria-hidden /></div>
+
+        <div className="clock-details mt-6 grid w-full grid-cols-3 gap-2 text-center">
           {[
             [t("First in"), state.firstIn],
             [t("Break time"), `${Math.round(state.breakMin)}m`],
@@ -255,9 +256,7 @@ function SelfieModal({ onCapture, onCancel }: { onCapture: (dataUrl: string) => 
   };
 
   return (
-    <Portal>
-    <div className="fixed inset-0 z-[80] grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="card rise w-full max-w-sm p-5 shadow-2xl">
+    <Dialog label={t("Take selfie")} onClose={onCancel} className="max-w-sm p-5">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-semibold">{t("Take selfie")}</h3>
           <button onClick={onCancel} aria-label={t("Close")}>
@@ -290,8 +289,6 @@ function SelfieModal({ onCapture, onCancel }: { onCapture: (dataUrl: string) => 
             </button>
           )}
         </div>
-      </div>
-    </div>
-    </Portal>
+    </Dialog>
   );
 }

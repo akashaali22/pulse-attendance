@@ -1,3 +1,6 @@
+import { Briefing } from "@/components/ui";
+import { Palmtree as BriefingIcon } from "lucide-react";
+import { DataTable } from "@/components/data-table";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
 import { all } from "@/lib/db";
@@ -41,6 +44,8 @@ export default async function LeavePage() {
   return (
     <>
       <PageHeader title={t("Leave")} subtitle={`${today.slice(0, 4)} · ${t("Leave balance")}`} />
+      <Briefing eyebrow={t("Time away")} title={t("Make space for what matters.")} description={t("Plan your time off, check your balance and follow every request.")} icon={<BriefingIcon />} tone="info" metrics={[{ label: t("Pending"), value: rows.filter(r => r.status === "pending").length }, { label: t("Approved"), value: rows.filter(r => r.status === "approved").length }]} />
+
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {balances.map((b) => (
@@ -117,9 +122,9 @@ export default async function LeavePage() {
 
         <Card title={t("My requests")}>
           {rows.length === 0 ? (
-            <Empty text={t("No records")} />
+            <Empty text={t("No requests yet")} description={t("Your requests and their review status will appear here.")} action={<a href="#apply" className="btn btn-ghost btn-sm">{t("Add")}</a>} />
           ) : (
-            <div className="overflow-x-auto">
+            <DataTable>
               <table className="data">
                 <thead>
                   <tr>
@@ -157,7 +162,7 @@ export default async function LeavePage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </DataTable>
           )}
         </Card>
       </div>

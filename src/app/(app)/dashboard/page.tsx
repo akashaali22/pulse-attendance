@@ -1,3 +1,4 @@
+import { LiveRefresh } from "@/components/live-refresh";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { AlarmClock, ArrowUpRight, CalendarCheck2, Clock3, Coffee, Palmtree, UserCheck, UserX, Users } from "lucide-react";
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
   const me = await requireUser();
-  const { t } = await getPrefs();
+  const { t, lang } = await getPrefs();
   const tz = getTz();
   const today = todayLocal();
   const monthStart = today.slice(0, 8) + "01";
@@ -39,10 +40,11 @@ export default async function Dashboard() {
     <>
       <PageHeader
         title={`${t(greet)}, ${me.name.split(" ")[0]}`}
-        subtitle={new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}
+        subtitle={new Intl.DateTimeFormat(lang === "ur" ? "ur-PK" : "en-US", { timeZone: tz, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      {isManager(me) && <TeamSection />}
+      <div className="dashboard-personal grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-4 lg:row-span-2">
           <ClockCard state={toClockState(todayMine, tz, me.shift_id)} shiftLabel={shiftLabel(me.shift_id)} requireSelfie={!!me.require_selfie} />
         </div>
@@ -93,7 +95,6 @@ export default async function Dashboard() {
         </Card>
       </div>
 
-      {isManager(me) && <TeamSection />}
     </>
   );
 }
@@ -158,18 +159,18 @@ async function TeamSection() {
   const inNow = todays.filter(({ d }) => d.status === "WORKING" || d.status === "ON_BREAK");
 
   return (
-    <div className="mt-8">
+    <div className="mb-8">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold tracking-tight">
           {t("Team Live")} <span className="ms-2 text-sm font-normal text-muted">{people.length} {t("Employees").toLowerCase()}</span>
         </h2>
-        <Link href="/team" className="btn btn-ghost btn-sm">
+        <div className="flex items-center gap-2"><LiveRefresh /><Link href="/team" className="btn btn-ghost btn-sm">
           {t("View all")} <ArrowUpRight className="size-3.5 rtl:-scale-x-100" />
-        </Link>
+        </Link></div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="card flex items-center gap-5 p-5 lg:col-span-4 rise">
+        <div className="workforce-overview card flex items-center gap-5 p-5 lg:col-span-4 rise">
           <Ring value={liveRate} label={t("Today")} />
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2"><span className="size-2 rounded-full bg-good live-dot" /> {working} {t("Working now")}</div>
@@ -243,7 +244,7 @@ async function TeamSection() {
         </Card>
       </div>
       <p className="mt-3 flex items-center gap-1.5 text-xs text-muted">
-        <Users className="size-3.5" /> {me.role === "admin" ? "All active employees" : "Your direct reports"}
+        <Users className="size-3.5" /> {t(me.role === "admin" ? "All active employees" : "Your direct reports")}
       </p>
     </div>
   );

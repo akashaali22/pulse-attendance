@@ -1,3 +1,6 @@
+import { Briefing } from "@/components/ui";
+import { FilePenLine as BriefingIcon } from "lucide-react";
+import { DataTable } from "@/components/data-table";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
 import { all } from "@/lib/db";
@@ -32,6 +35,8 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
   return (
     <>
       <PageHeader title={t("Corrections")} subtitle={t("Missed punch or wrong time? Request a correction for manager approval.")} />
+      <Briefing eyebrow={t("Attendance care")} title={t("Keep your record accurate.")} description={t("Missed a punch? Send the right timings to your manager for review.")} icon={<BriefingIcon />} metrics={[{ label: t("Pending"), value: rows.filter(r => r.status === "pending").length }, { label: t("My requests"), value: rows.length }]} />
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[380px_1fr]">
         <Card title={<span id="apply">{t("Request correction")}</span>}>
           <ActionForm action={requestCorrection} className="space-y-3 p-5">
@@ -54,9 +59,9 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
         </Card>
         <Card title={t("My requests")}>
           {rows.length === 0 ? (
-            <Empty text={t("No records")} />
+            <Empty text={t("No requests yet")} description={t("Your requests and their review status will appear here.")} action={<a href="#apply" className="btn btn-ghost btn-sm">{t("Add")}</a>} />
           ) : (
-            <div className="overflow-x-auto">
+            <DataTable>
               <table className="data">
                 <thead>
                   <tr>
@@ -90,7 +95,7 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
                   ))}
                 </tbody>
               </table>
-            </div>
+            </DataTable>
           )}
         </Card>
       </div>

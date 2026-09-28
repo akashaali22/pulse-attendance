@@ -1,3 +1,4 @@
+import { DataTable } from "@/components/data-table";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ShieldCheck, ShieldX } from "lucide-react";
@@ -6,7 +7,7 @@ import { all } from "@/lib/db";
 import { verifyAuditChain } from "@/lib/audit";
 import { getTz } from "@/lib/data";
 import { getPrefs } from "@/lib/prefs";
-import { Card, PageHeader } from "@/components/ui";
+import { Briefing, Card, PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Audit Log" };
 export const dynamic = "force-dynamic";
@@ -47,20 +48,13 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
         </form>
       </PageHeader>
 
-      <div className={`card mb-4 flex items-center gap-4 p-5 ${chain.ok ? "border-good/30" : "border-bad/40"}`}>
-        {chain.ok ? <ShieldCheck className="size-8 text-good" /> : <ShieldX className="size-8 text-bad" />}
-        <div>
-          <div className="font-semibold">{chain.ok ? "Integrity verified" : "Integrity check FAILED"}</div>
-          <div className="text-sm text-muted">
-            {chain.ok
-              ? `All ${chain.checked} entries link correctly — no entry has been altered or removed.`
-              : `The chain breaks at entry #${chain.brokenAt}. Records from that point may have been tampered with.`}
-          </div>
-        </div>
-      </div>
+      <Briefing eyebrow={t("Workspace trust")} title={t(chain.ok ? "Integrity verified" : "Integrity check FAILED")}
+        description={chain.ok ? t("Every change connected. Every record accounted for.") : `The chain breaks at entry #${chain.brokenAt}. Records from that point may have been tampered with.`}
+        icon={chain.ok ? <ShieldCheck /> : <ShieldX />} tone={chain.ok ? "good" : "warn"}
+        metrics={[{ label: t("Verified entries"), value: chain.checked }]} />
 
       <Card>
-        <div className="overflow-x-auto">
+        <DataTable>
           <table className="data">
             <thead>
               <tr>
@@ -87,7 +81,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
               ))}
             </tbody>
           </table>
-        </div>
+        </DataTable>
         <div className="flex justify-between border-t border-line px-5 py-3 text-sm">
           {page > 1 ? <Link className="text-accent" href={`/audit?page=${page - 1}&q=${encodeURIComponent(q)}`}>← Newer</Link> : <span />}
           {hasMore && <Link className="text-accent" href={`/audit?page=${page + 1}&q=${encodeURIComponent(q)}`}>Older →</Link>}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Pencil, X } from "lucide-react";
 import { adminCorrectDay } from "@/actions/requests";
 import { usePrefs } from "@/components/providers";
-import { Portal } from "@/components/portal";
+import { Dialog } from "@/components/dialog";
 
 export function EditDay({ userId, name, date, inT, outT }: { userId: number; name: string; date: string; inT: string; outT: string }) {
   const { t, toast } = usePrefs();
@@ -18,10 +18,9 @@ export function EditDay({ userId, name, date, inT, outT }: { userId: number; nam
         <Pencil className="size-3.5" />
       </button>
       {open && (
-        <Portal>
-        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setOpen(false)}>
+        <Dialog label={`${t("Edit")} · ${name}`} onClose={() => setOpen(false)} className="max-w-sm">
           <form
-            className="card rise w-full max-w-sm space-y-3 p-5 text-start shadow-2xl"
+            className="space-y-3 p-5 text-start"
             onClick={(e) => e.stopPropagation()}
             onSubmit={(e) => {
               e.preventDefault();
@@ -64,8 +63,7 @@ export function EditDay({ userId, name, date, inT, outT }: { userId: number; nam
               {pending ? <Loader2 className="size-4 animate-spin" /> : t("Save")}
             </button>
           </form>
-        </div>
-        </Portal>
+        </Dialog>
       )}
     </>
   );

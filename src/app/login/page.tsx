@@ -17,17 +17,19 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
-      <section className="relative hidden overflow-hidden border-e border-line p-12 lg:flex lg:flex-col lg:justify-between">
-        <div className="flex items-center gap-3">
+      <section className="auth-brand relative hidden overflow-hidden border-e border-line p-12 lg:flex lg:flex-col lg:justify-between">
+        <div className="auth-orbit" aria-hidden />
+        <div className="relative flex items-center gap-3">
           <Logo />
           <span className="text-lg font-semibold tracking-tight">Pulse</span>
         </div>
-        <div className="max-w-lg">
+        <div className="relative max-w-lg">
+          <p className="auth-eyebrow">{t("People. Time. In sync.")}</p>
           <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight">
-            Attendance that is <span className="text-gradient">verified</span>, not self-reported.
+            {t("A clearer view of every working day.")}
           </h1>
           <p className="mt-5 text-ink-2">
-            Geofenced check-ins, rotating QR kiosks, approvals and a tamper-evident audit trail — for {company}.
+            {t("Attendance, leave and your entire team. Connected in one workspace.")}
           </p>
           <div className="mt-10 grid grid-cols-2 gap-3 text-sm">
             {[
@@ -40,7 +42,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               return (
                 <div key={label as string} className="card flex items-center gap-3 px-4 py-3">
                   <I className="size-4 text-accent" />
-                  <span className="text-ink-2">{label as string}</span>
+                  <span className="text-ink-2">{t(label as string)}</span>
                 </div>
               );
             })}
@@ -50,7 +52,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       </section>
 
       <section className="flex items-center justify-center p-6">
-        <div className="w-full max-w-sm rise">
+        <div className="auth-form-surface w-full max-w-[420px] rise">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
             <Logo />
             <span className="text-lg font-semibold">Pulse</span>

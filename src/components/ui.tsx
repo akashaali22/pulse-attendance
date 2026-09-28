@@ -1,5 +1,7 @@
+import { Inbox } from "lucide-react";
 import clsx from "clsx";
 import type { DayStatus } from "@/lib/engine";
+import { AnimatedValue } from "./animated-value";
 
 export const STATUS_STYLE: Record<DayStatus | "pending" | "approved" | "rejected" | "cancelled", { dot: string; chip: string }> = {
   PRESENT: { dot: "bg-good", chip: "text-good bg-good/10 border-good/25" },
@@ -24,7 +26,7 @@ export const STATUS_STYLE: Record<DayStatus | "pending" | "approved" | "rejected
 export function StatusBadge({ status, label }: { status: keyof typeof STATUS_STYLE; label: string }) {
   const s = STATUS_STYLE[status] ?? STATUS_STYLE.NOT_STARTED;
   return (
-    <span className={clsx("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium", s.chip)}>
+    <span data-status={status} className={clsx("status-badge inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium", s.chip)}>
       <span className={clsx("size-1.5 rounded-full", s.dot)} />
       {label}
     </span>
@@ -33,7 +35,7 @@ export function StatusBadge({ status, label }: { status: keyof typeof STATUS_STY
 
 export function PageHeader({ title, subtitle, children }: { title: string; subtitle?: string; children?: React.ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4 rise">
+    <div className="page-header mb-6 flex flex-wrap items-end justify-between gap-4 rise">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
@@ -60,12 +62,12 @@ export function StatCard({
 }) {
   const toneCls = { accent: "text-accent bg-accent/10", good: "text-good bg-good/10", warn: "text-warn bg-warn/10", bad: "text-bad bg-bad/10", info: "text-info bg-info/10", serious: "text-serious bg-serious/10" }[tone];
   return (
-    <div className={clsx("card relative min-w-0 overflow-hidden p-4 sm:p-5 rise", className)}>
+    <div style={{ "--metric-tone": `var(--${tone})` } as React.CSSProperties} className={clsx("metric-card card relative min-w-0 overflow-hidden p-4 sm:p-5 rise", className)}>
       <div className="flex items-start justify-between gap-2">
         <span className="min-w-0 text-[11px] font-medium uppercase tracking-wider text-muted sm:text-xs">{label}</span>
         {icon && <span className={clsx("grid size-8 shrink-0 place-items-center rounded-lg", toneCls)}>{icon}</span>}
       </div>
-      <div className="mt-3 truncate text-2xl font-semibold tracking-tight sm:text-3xl">{value}</div>
+      <div className={clsx("metric-value mt-3 font-semibold tracking-tight", typeof value === "string" && value.length > 6 && "metric-value-long")}>{typeof value === "number" || typeof value === "string" ? <bdi><AnimatedValue value={value} /></bdi> : value}</div>
       {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
     </div>
   );
@@ -75,7 +77,7 @@ export function Card({ title, action, children, className }: { title?: React.Rea
   return (
     <section className={clsx("card rise", className)}>
       {(title || action) && (
-        <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
+        <div className="card-heading flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
           <h2 className="text-sm font-semibold">{title}</h2>
           {action}
         </div>
@@ -85,8 +87,20 @@ export function Card({ title, action, children, className }: { title?: React.Rea
   );
 }
 
-export function Empty({ text }: { text: string }) {
-  return <div className="px-5 py-12 text-center text-sm text-muted">{text}</div>;
+export function Empty({ text, description, action }: { text: string; description?: string; action?: React.ReactNode }) {
+  return <div className="empty-state text-sm"><span className="empty-symbol"><Inbox className="size-5" aria-hidden /></span><p className="font-medium text-ink">{text}</p>{description && <p className="max-w-xs text-xs text-muted">{description}</p>}{action}</div>;
+}
+
+/** A route's primary reading: real context and measures, before detailed work below. */
+export function Briefing({ eyebrow, title, description, icon, metrics, children, tone = "accent" }: {
+  eyebrow: string; title: string; description?: string; icon?: React.ReactNode;
+  metrics?: { label: string; value: string | number }[]; children?: React.ReactNode;
+  tone?: "accent" | "good" | "warn" | "info";
+}) {
+  return <section className="briefing rise" style={{ "--briefing-tone": `var(--${tone})` } as React.CSSProperties}>
+    <div className="briefing-copy"><div className="eyebrow">{icon}<span>{eyebrow}</span></div><h2>{title}</h2>{description && <p>{description}</p>}{children}</div>
+    {metrics && <dl className="briefing-metrics">{metrics.map(metric => <div key={metric.label}><dt>{metric.label}</dt><dd><AnimatedValue value={metric.value} /></dd></div>)}</dl>}
+  </section>;
 }
 
 export function Avatar({ name, size = "size-8" }: { name: string; size?: string }) {

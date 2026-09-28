@@ -1,3 +1,6 @@
+import { Briefing } from "@/components/ui";
+import { SlidersHorizontal as BriefingIcon } from "lucide-react";
+import { DataTable } from "@/components/data-table";
 import type { Metadata } from "next";
 import { MapPin, Trash2 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
@@ -8,7 +11,7 @@ import { removeItem, revokeDevice, saveAgentSettings, saveCompany, saveDepartmen
 import { listDevices } from "@/lib/agent";
 import { getTz } from "@/lib/data";
 import { ActionButton, ActionForm, Field, SubmitButton, Tabs } from "@/components/forms";
-import { Card, PageHeader } from "@/components/ui";
+import { Card, Empty, PageHeader } from "@/components/ui";
 import type { ShiftRow } from "@/lib/data";
 import { UseMyLocation } from "./use-location";
 
@@ -113,9 +116,9 @@ export default async function SettingsPage() {
       </div>
       <Card title={`Linked PCs · ${devices.filter((d) => !d.revoked).length}`}>
         {devices.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-muted">No PCs linked yet.</p>
+          <Empty text={t("No PCs linked yet.")} />
         ) : (
-          <div className="overflow-x-auto">
+          <DataTable>
             <table className="data">
               <thead>
                 <tr>
@@ -152,7 +155,7 @@ export default async function SettingsPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </DataTable>
         )}
       </Card>
     </div>
@@ -226,6 +229,7 @@ export default async function SettingsPage() {
 
   const simpleList = (items: { id: number; label: React.ReactNode; sub?: string }[], table: "departments" | "holidays" | "leave_types") => (
     <ul className="divide-y divide-line">
+      {items.length === 0 && <li><Empty text={t("No records")} /></li>}
       {items.map((i) => (
         <li key={i.id} className="flex items-center gap-3 px-5 py-3 text-sm">
           <span className="flex-1 text-ink">{i.label}</span>
@@ -288,7 +292,9 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeader title={t("Settings")} subtitle="Company policy, shifts, geofences, holidays and leave" />
+      <PageHeader title={t("Settings")} subtitle={t("Company policy, shifts, geofences, holidays and leave")} />
+      <Briefing eyebrow={t("Workspace controls")} title={t("Set the rhythm of your workplace.")} description={t("One place for company policy, work schedules and connected locations.")} icon={<BriefingIcon />} metrics={[{ label: t("Shift"), value: shifts.length }, { label: t("Locations"), value: locations.filter(l => l.active).length }, { label: t("Department"), value: departments.length }]} />
+
       <Tabs
         tabs={[
           { id: "company", label: "Company", content: company },
