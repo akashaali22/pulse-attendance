@@ -3,7 +3,6 @@ node_modules
 .git
 data
 test-run
-agent/bin
 agent/obj
 *.log
 README.md

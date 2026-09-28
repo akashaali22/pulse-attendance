@@ -66,6 +66,10 @@ age comes from the PC clock, so the server marks that punch as flagged for a man
 | `%LOCALAPPDATA%\PulseAgent\queue.json` | Events waiting for the server |
 | `HKCU\…\CurrentVersion\Run\PulseAttendanceAgent` | Starts with Windows |
 
+## The Mac
+
+macOS has its own agent, same idea and same server API: see [mac/README.md](mac/README.md).
+
 ## Source
 
 Everything is in [src/PulseAgent.cs](src/PulseAgent.cs) (C# 5 — keep it compatible with the compiler

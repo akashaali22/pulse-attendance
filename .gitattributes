@@ -1,0 +1,6 @@
+# Shell scripts run on macOS and in the Linux container. A CRLF line ending turns the shebang into
+# "/bin/bash\r", which fails with "bad interpreter" — so these files stay LF wherever they are
+# checked out, including on the Windows machines this is developed on.
+*.sh text eol=lf
+*.plist text eol=lf
+Dockerfile text eol=lf

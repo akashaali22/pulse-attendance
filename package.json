@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "seed:demo": "node scripts/seed-demo.mjs",
-    "build:agent": "node scripts/build-agent.mjs"
+    "build:agent": "node scripts/build-agent.mjs",
+    "build:agent:mac": "bash scripts/build-agent-mac.sh"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

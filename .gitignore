@@ -14,12 +14,14 @@
 # local test-run state and reports
 /test-run/
 
-# The built Windows agent IS committed, so a deployment can hand it to employees.
-# Rebuild with: npm run build:agent  (Windows only)
+# The built agents ARE committed, so a deployment can hand them to employees.
+# Rebuild with: npm run build:agent  (Windows only) / npm run build:agent:mac  (Mac only)
 /agent/obj/
 /agent/bin/*
 !/agent/bin/PulseAgent.exe
 !/agent/bin/PulseAgent.exe.sha256
+!/agent/bin/PulseAgent.dmg
+!/agent/bin/PulseAgent.dmg.sha256
 
 # env files
 .env*

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>PulseAgent</string>
+  <key>CFBundleDisplayName</key><string>Pulse Attendance</string>
+  <key>CFBundleIdentifier</key><string>com.pulse.attendance.agent</string>
+  <key>CFBundleExecutable</key><string>PulseAgent</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>1.0.0</string>
+  <key>CFBundleVersion</key><string>1.0.0</string>
+  <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <!-- No Dock icon: opening the app shows a dialog, the agent itself lives in the background. -->
+  <key>LSUIElement</key><true/>
+  <key>NSHumanReadableCopyright</key><string>Pulse Attendance</string>
+</dict>
+</plist>
