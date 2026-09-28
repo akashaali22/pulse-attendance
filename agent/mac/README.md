@@ -21,7 +21,13 @@ Both end up running the same [pulse-agent.sh](pulse-agent.sh) from
 ## Building the disk image
 
 A `.dmg` can only be made by macOS itself, so this is the one build step that cannot run on the
-deployment machine. On any Mac, from the `web/` folder:
+deployment machine.
+
+**Without a Mac:** the *Build the Mac agent* workflow does it on GitHub's own Mac runners — Actions
+tab → Run workflow. It builds the image, mounts it to check the app inside really runs, and commits
+it. Nothing else to do.
+
+**On a Mac,** from the `web/` folder:
 
 ```
 npm run build:agent:mac -- --server https://your-server
@@ -40,8 +46,9 @@ publisher. The first launch must be **right-click → Open**; after that it open
 Developer ID ($99/year) and notarising the image would remove that step — nothing else about the
 agent would change.
 
-The ad-hoc signature is not decoration: without it macOS on Apple silicon refuses to run the app at
-all.
+The ad-hoc signature is not what makes the app run — the bundle's executable is a shell script, so the
+binary macOS actually launches is Apple's own `/bin/bash`. It seals the bundle instead, so macOS
+notices if anything inside it is swapped out.
 
 ## What the app does when opened
 

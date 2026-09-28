@@ -1,0 +1,59 @@
+# Builds PulseAgent.dmg on a real Mac and commits it, so nobody needs a Mac of their own.
+#
+# Run it from the repository's Actions tab: "Build the Mac agent" → "Run workflow".
+# It also runs by itself whenever the Mac agent's own files change.
+name: Build the Mac agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      server:
+        description: "Server address to pre-fill in the app's first-run dialog"
+        required: false
+        default: https://pulse-attendance.onrender.com
+  push:
+    branches: [main]
+    paths:
+      - "agent/mac/**"
+      - "scripts/build-agent-mac.sh"
+      - ".github/workflows/build-mac-agent.yml"
+
+jobs:
+  dmg:
+    # A disk image can only be made by macOS itself (hdiutil), which is the whole reason this job exists.
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the disk image
+        run: bash scripts/build-agent-mac.sh --server "${{ inputs.server || 'https://pulse-attendance.onrender.com' }}"
+
+      - name: Check the app actually assembled
+        run: |
+          hdiutil attach agent/bin/PulseAgent.dmg -mountpoint /tmp/dmg -nobrowse -quiet
+          test -x "/tmp/dmg/Pulse Attendance.app/Contents/MacOS/PulseAgent" || { echo "launcher missing or not executable"; exit 1; }
+          test -f "/tmp/dmg/Pulse Attendance.app/Contents/Resources/pulse-agent.sh" || { echo "agent missing"; exit 1; }
+          bash -n "/tmp/dmg/Pulse Attendance.app/Contents/Resources/pulse-agent.sh"
+          bash "/tmp/dmg/Pulse Attendance.app/Contents/Resources/pulse-agent.sh" selftest
+          hdiutil detach /tmp/dmg -quiet
+          echo "The image mounts and the app inside it runs."
+
+      # Also downloadable straight from this run's summary page, before it is committed.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PulseAgent-dmg
+          path: agent/bin/PulseAgent.dmg*
+
+      - name: Commit it, so the server can hand it to employees
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f agent/bin/PulseAgent.dmg agent/bin/PulseAgent.dmg.sha256
+          if git diff --cached --quiet; then
+            echo "The image is unchanged — nothing to commit."
+            exit 0
+          fi
+          git commit -m "Build the Mac agent disk image"
+          git push

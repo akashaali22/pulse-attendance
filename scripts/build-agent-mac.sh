@@ -50,9 +50,9 @@ if [ -f public/icon-512.png ]; then
 fi
 
 # Ad-hoc signature. It buys no trust from Gatekeeper — employees still open it the first time with
-# right-click → Open — but without it macOS on Apple silicon kills the app outright.
+# right-click → Open — but it seals the bundle, so macOS notices if anything inside is swapped out.
 echo "  Signing…"
-codesign --force --deep --sign - "${APP}" >/dev/null 2>&1 || echo "  (could not sign — the app may not open on Apple silicon)"
+codesign --force --deep --sign - "${APP}" >/dev/null 2>&1 || echo "  (could not sign — the app still runs, but the bundle is unsealed)"
 
 ln -s /Applications "${STAGE}/Applications"
 mkdir -p agent/bin
