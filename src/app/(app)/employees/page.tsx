@@ -1,4 +1,8 @@
+import { Briefing } from "@/components/ui";
+import { UsersRound as BriefingIcon } from "lucide-react";
+import { DataTable } from "@/components/data-table";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { MapPin, Camera, KeyRound, Power } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { all } from "@/lib/db";
@@ -48,6 +52,8 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
       >
         {isAdmin && <EmployeeDialog {...opts} nextCode={nextCode} />}
       </PageHeader>
+      <Briefing eyebrow={t("People directory")} title={t("The people behind your progress.")} description={t("Manage your team, their roles and the way they work.")} icon={<BriefingIcon />} metrics={[{ label: t("Employees"), value: rows.length }, { label: t("Active"), value: rows.filter(r => r.status === "active").length }]} />
+
       {resetRequests.length > 0 && (
         <Card
           className="mb-4 border-warn/40"
@@ -62,7 +68,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
               <li key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
                 <Avatar name={r.name} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-ink">{r.name}</div>
+                  <Link href={`/employees/${r.user_id}`} className="text-sm font-medium text-ink hover:underline">{r.name}</Link>
                   <div className="truncate text-xs text-muted">
                     {r.emp_code} · {r.email}
                     {r.note ? ` · “${r.note}”` : ""} · {new Date(r.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
@@ -88,7 +94,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         {rows.length === 0 ? (
           <Empty text={t("No records")} />
         ) : (
-          <div className="overflow-x-auto">
+          <DataTable>
             <table className="data">
               <thead>
                 <tr>
@@ -106,13 +112,13 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                 {rows.map((r) => (
                   <tr key={r.id} className={r.status === "inactive" ? "opacity-50" : ""}>
                     <td>
-                      <div className="flex items-center gap-3">
+                      <Link href={`/employees/${r.id}`} className="flex items-center gap-3 hover:underline" title={t("Open profile")}>
                         <Avatar name={r.name} />
                         <span>
                           <span className="block font-medium text-ink">{r.name}</span>
                           <span className="block text-xs text-muted">{r.emp_code} · {r.email}</span>
                         </span>
-                      </div>
+                      </Link>
                     </td>
                     <td className="capitalize">{r.role}</td>
                     <td>{r.department ?? "—"}<div className="text-xs text-muted">{r.designation}</div></td>
@@ -146,7 +152,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                 ))}
               </tbody>
             </table>
-          </div>
+          </DataTable>
         )}
       </Card>
     </>

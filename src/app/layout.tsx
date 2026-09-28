@@ -3,6 +3,8 @@ import { getPrefs } from "@/lib/prefs";
 import { Providers } from "@/components/providers";
 import { RegisterServiceWorker } from "@/components/pwa";
 import "./globals.css";
+// The signature layer: tokens and surface treatment only, loaded after the design system.
+import "./signature.css";
 
 export const metadata: Metadata = {
   title: { default: "Pulse Attendance", template: "%s · Pulse Attendance" },

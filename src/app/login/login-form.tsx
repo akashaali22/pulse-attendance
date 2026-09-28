@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, MonitorDown } from "lucide-react";
 import { login } from "@/actions/auth";
 import { usePrefs } from "@/components/providers";
 
@@ -51,18 +51,25 @@ export function LoginForm({ next }: { next: string }) {
             type="button"
             onClick={() => setShow((s) => !s)}
             className="absolute end-2 top-1/2 -translate-y-1/2 p-1 text-muted hover:text-ink"
-            aria-label={show ? "Hide password" : "Show password"}
-            title={show ? "Hide password" : "Show password"}
+            aria-label={t(show ? "Hide password" : "Show password")}
+            title={t(show ? "Hide password" : "Show password")}
           >
             {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>
         </div>
-        {caps && <p className="mt-1 text-xs text-warn">Caps Lock is on</p>}
+        {caps && <p className="mt-1 text-xs text-warn">{t("Caps Lock is on")}</p>}
       </div>
-      {error && <p className="rounded-xl border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{t(error)}</p>}
+      {error && <p role="alert" className="rounded-xl border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{t(error)}</p>}
       <button type="submit" className="btn btn-primary w-full py-2.5" disabled={pending}>
         {pending ? <Loader2 className="size-4 animate-spin" /> : <>{t("Sign in")} <ArrowRight className="size-4 rtl:rotate-180" /></>}
       </button>
+      <Link
+        href="/download"
+        className="flex items-center justify-center gap-2 rounded-xl border border-line px-3 py-2.5 text-sm text-ink-2 transition hover:border-accent/40 hover:text-ink"
+      >
+        <MonitorDown className="size-4 text-accent" /> {t("Get the app")}
+        <span className="text-xs text-muted">Windows · Mac · Phone</span>
+      </Link>
     </form>
   );
 }

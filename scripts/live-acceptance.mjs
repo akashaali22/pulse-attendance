@@ -34,6 +34,7 @@ async function session(email, password, opts = {}) {
   });
   const page = await ctx.newPage();
   page.on("pageerror", (e) => jsErrors.push(`${email}: ${e.message}`));
+  // Left for window.alert (a generated password); confirmations use an in-page dialog.
   page.on("dialog", (d) => d.accept(d.type() === "prompt" ? "ok" : undefined));
   await page.goto(`${BASE}/login`, { timeout: 180000 });
   await page.fill("#email", email);
@@ -245,6 +246,8 @@ check("3.1 new employee can sign in", emp.ok);
   await a.goto(`${BASE}/employees?q=${encodeURIComponent(stamp)}`);
   const row = a.locator("tbody tr", { hasText: EMP.name });
   await row.getByRole("button", { name: "Inactive" }).click().catch(() => {});
+  // Confirmations are an in-page dialog now, not window.confirm.
+  await a.getByRole("dialog").getByRole("button", { name: "Confirm", exact: true }).click().catch(() => {});
   await a.waitForTimeout(2500);
   check("9.1 test employee deactivated", await seen(a.getByText(/deactivated/i), 15000));
 }

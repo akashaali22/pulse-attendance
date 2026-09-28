@@ -1,0 +1,415 @@
+/*
+ * Pulse — signature layer.
+ *
+ * Thesis: this should feel like a mission-control console at night, an instrument panel
+ * reading live telemetry off a workforce — not like another dark SaaS dashboard.
+ *
+ * Direction: the structure of a trading terminal (hairlines, tabular numerals, dense rows)
+ * with the atmosphere of a night-time control room (indigo-cast dark, one cyan signal colour,
+ * ambient glow instead of drop shadows).
+ *
+ * Signature move: THE INSTRUMENT READOUT. Every number that matters — a KPI, the live timer,
+ * the kiosk clock, a table total — is set in wide tabular mono, letterspaced, lit by a soft
+ * bloom and underlined by a hairline gauge rule. It repeats on every screen, so one frame of
+ * this app is recognisable.
+ *
+ * This file only redefines tokens and adds surface treatment; it loads after globals.css and
+ * changes no component markup, so the existing design system keeps working.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap");
+
+/* ── Daylight: an instrument panel under bright light ─────────────────────── */
+:root {
+  --bg: #eef1fa;
+  --surface: #ffffff;
+  --surface-2: #e7ecf8;
+  --border: rgba(38, 54, 110, 0.12);
+  --border-strong: rgba(38, 54, 110, 0.22);
+  --text: #0e1630;
+  --text-2: #46537a;
+  --muted: #5d6a93;
+  --accent: #0a6fa8;
+  --accent-2: #5b4fe0;
+  --accent-soft: rgba(10, 111, 168, 0.10);
+  --good: #0f7a52;
+  --warn: #8a5a08;
+  --serious: #a8501f;
+  --bad: #bb3a52;
+  --info: #1f6bb0;
+  --grid: rgba(38, 54, 110, 0.09);
+  --glow: rgba(91, 79, 224, 0.14);
+  --bloom: rgba(10, 111, 168, 0.22);
+  --scanline: rgba(38, 54, 110, 0.05);
+}
+
+/* ── Night: the control room ──────────────────────────────────────────────── */
+.dark {
+  --bg: #06080f;
+  --surface: #0d1322;
+  --surface-2: #141c2f;
+  --border: rgba(126, 154, 255, 0.13);
+  --border-strong: rgba(126, 154, 255, 0.26);
+  --text: #e9efff;
+  --text-2: #a9b6d9;
+  --muted: #7e8cb4;
+  --accent: #4de1ff;
+  --accent-2: #8a7cff;
+  --accent-soft: rgba(77, 225, 255, 0.10);
+  --good: #3fe0a8;
+  --warn: #ffc76e;
+  --serious: #ff9a62;
+  --bad: #ff6b81;
+  --info: #7cc4ff;
+  --grid: rgba(126, 154, 255, 0.07);
+  --glow: rgba(138, 124, 255, 0.20);
+  --bloom: rgba(77, 225, 255, 0.34);
+  --scanline: rgba(126, 154, 255, 0.045);
+  /* On a dark surface a drop shadow is invisible; depth comes from hairlines and tint. */
+  --shadow-card: 0 0 0 1px rgba(126, 154, 255, 0.04), 0 18px 50px -34px rgba(0, 0, 0, 0.9);
+  --shadow-overlay: 0 40px 120px -30px rgba(0, 0, 0, 0.85);
+}
+
+/* ── Atmosphere: an aurora and a survey grid, fixed behind everything ─────── */
+/* The body paints its own opaque background over its negative-z-index layers, which is why
+   the room was invisible: keep the base colour on the page canvas and let the body be glass. */
+html {
+  background: var(--bg);
+}
+
+body {
+  background: transparent;
+}
+
+.ambient::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(58rem 40rem at 88% -12%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 58%),
+    radial-gradient(46rem 32rem at 4% 2%, color-mix(in oklab, var(--accent-2) 12%, transparent), transparent 56%);
+  opacity: 1;
+}
+
+.dark.ambient::before,
+.dark .ambient::before {
+  background:
+    radial-gradient(58rem 40rem at 88% -12%, color-mix(in oklab, var(--accent) 55%, transparent), transparent 58%),
+    radial-gradient(46rem 32rem at 4% 2%, color-mix(in oklab, var(--accent-2) 45%, transparent), transparent 56%),
+    radial-gradient(72rem 48rem at 46% 118%, color-mix(in oklab, var(--accent-2) 30%, transparent), transparent 64%);
+}
+
+.ambient::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  /* A mask on a full-screen fixed layer repaints on scroll; a flat opacity reads the same. */
+  opacity: 0.5;
+}
+
+/* ── Type: a wide geometric face for display, mono for every readout ──────── */
+h1,
+h2,
+.page-header h1,
+.metric-value,
+.hero-readout {
+  font-family: "Space Grotesk", var(--font-sans);
+  letter-spacing: -0.03em;
+}
+
+/* THE SIGNATURE MOVE — an instrument readout. */
+.metric-value,
+.hero-readout,
+.readout {
+  font-family: "JetBrains Mono", var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 26px var(--bloom);
+}
+
+/* the gauge rule that sits under every readout */
+.metric-card .metric-value::after,
+.hero-readout::after {
+  content: "";
+  display: block;
+  height: 1px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, var(--accent) 0%, color-mix(in oklab, var(--accent) 30%, transparent) 38%, transparent 72%);
+  opacity: 0.75;
+}
+
+.label,
+.card-heading > :first-child,
+th {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+}
+
+/* ── Surfaces: hairline first, tint second, never a soft shadow ───────────── */
+.card {
+  /* glass, not paint: the atmosphere reads through every panel, which is what makes the
+     screens feel like one lit room rather than a stack of separate boxes */
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent) 4%, transparent), transparent 46%),
+    var(--surface);
+  border-color: var(--border);
+  position: relative;
+}
+
+.dark .card {
+  /* Transparency, not blur: a blurred backdrop on every card on the page costs a full-screen
+     GPU pass per card and made scrolling stutter. The room still reads through. */
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent) 5%, transparent), transparent 46%),
+    color-mix(in oklab, var(--surface) 72%, transparent);
+}
+
+.dark .card::before {
+  /* the lit top edge of a panel catching the room light */
+  content: "";
+  position: absolute;
+  inset-inline: 14%;
+  top: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--accent) 55%, transparent), transparent);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.app-sidebar,
+.app-topbar {
+  /* Translucent, but never blurred: these are fixed and full-length, so a backdrop blur here
+     is a full-area GPU pass on every scrolled frame. Measured: 46-54fps with it, 59 without. */
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  border-color: var(--border);
+}
+
+/* ── Controls ─────────────────────────────────────────────────────────────── */
+.btn-primary {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 92%, white 8%), var(--accent));
+  color: #04121b;
+  border: 1px solid color-mix(in oklab, var(--accent) 60%, transparent);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset, 0 8px 26px -14px var(--bloom);
+}
+
+.dark .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 84%, white 16%), var(--accent));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset, 0 12px 34px -12px var(--bloom);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* the active navigation item reads as a lit channel, not a filled rectangle */
+.app-sidebar a[aria-current="page"],
+.nav-item.is-active {
+  background: linear-gradient(90deg, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* ── Data: the terminal half of the direction ─────────────────────────────── */
+table.data tbody tr:hover {
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
+}
+
+.tabular,
+td.tabular,
+.metric-card .metric-label {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The aurora is deliberately static: animating a full-screen gradient repaints the whole
+   viewport every frame, which is felt on every scroll. */
+
+/* ── The instrument tile: one cut corner, a lit edge, a gauge rule ────────── */
+.metric-card {
+  clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%);
+  border-radius: var(--radius-sm) !important;
+}
+
+.metric-card::before {
+  /* the diagonal cut is drawn as a lit hairline so it reads as machined, not broken */
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(225deg, color-mix(in oklab, var(--accent) 85%, transparent) 0 2px, color-mix(in oklab, var(--accent) 16%, transparent) 2px 4px, transparent 5px);
+  pointer-events: none;
+}
+
+.metric-label,
+.metric-card .label {
+  color: var(--muted);
+}
+
+/* ── The hero: the live ring should glow like an instrument, not sit flat ─── */
+.card svg circle[stroke-linecap="round"] {
+  filter: drop-shadow(0 0 14px var(--bloom));
+}
+
+
+
+/* ── Scale: the readout is the loudest thing on every screen ─────────────── */
+.metric-value {
+  font-size: clamp(30px, 3vw, 40px);
+  line-height: 1.05;
+}
+
+.hero-readout,
+.clock-readout {
+  font-size: clamp(44px, 6vw, 68px);
+}
+
+/* Section labels as letterspaced micro-caps in the signal colour. */
+.card-heading > :first-child,
+.page-header p {
+  color: var(--text-2);
+}
+
+.card-heading > :first-child {
+  color: color-mix(in oklab, var(--accent) 70%, var(--text));
+}
+
+/* Topbar and sidebar sit on the room, not on paint. */
+.dark .app-sidebar,
+.dark .app-topbar {
+  background: color-mix(in oklab, var(--surface) 46%, transparent);
+}
+
+/* Inputs read as machined slots. */
+.input {
+  border-color: var(--border-strong);
+}
+
+.dark .input {
+  background: color-mix(in oklab, var(--surface-2) 60%, transparent);
+}
+
+.dark .input:focus {
+  box-shadow: 0 0 0 1px var(--accent), 0 0 24px -6px var(--bloom);
+}
+
+/* ── Sign-in: the brand panel joins the same room instead of its own teal box ── */
+.auth-brand {
+  background:
+    linear-gradient(140deg, color-mix(in oklab, var(--accent-2) 26%, transparent), transparent 46%),
+    linear-gradient(20deg, color-mix(in oklab, var(--accent) 22%, transparent), transparent 52%),
+    color-mix(in oklab, var(--surface) 42%, transparent);
+  color: var(--text);
+}
+
+.auth-brand .text-accent,
+.auth-eyebrow {
+  color: var(--accent);
+}
+
+.auth-orbit {
+  border-color: color-mix(in oklab, var(--accent) 34%, transparent);
+  box-shadow:
+    0 0 0 65px color-mix(in oklab, var(--accent) 7%, transparent),
+    0 0 0 130px color-mix(in oklab, var(--accent-2) 5%, transparent),
+    0 0 140px 20px var(--bloom);
+}
+
+.auth-form-surface {
+  border-color: var(--border-strong);
+}
+
+.dark .auth-form-surface {
+  background: color-mix(in oklab, var(--surface) 62%, transparent);
+  backdrop-filter: blur(16px) saturate(1.2);
+}
+
+/* The mark itself carries the signal colour. Deliberately only the mark: an attribute
+   selector on bg-accent also catches every bg-accent-soft chip and turns readable tints
+   into solid blocks. */
+.logo-mark {
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 24px -4px var(--bloom);
+}
+
+/* The logo mark is hard-coded to the old teal; bring it onto the signal gradient. */
+.bg-\[\#087f76\] {
+  background: linear-gradient(140deg, var(--accent), var(--accent-2)) !important;
+  box-shadow: 0 0 22px -6px var(--bloom);
+}
+
+/* ── Tables: the terminal half of the direction ──────────────────────────── */
+table.data thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-strong);
+  color: color-mix(in oklab, var(--accent) 62%, var(--text-2));
+}
+
+.dark table.data tbody tr {
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+}
+
+.dark table.data tbody tr:hover {
+  /* a scan passing over the row, not a grey fill */
+  background: linear-gradient(90deg, color-mix(in oklab, var(--accent) 12%, transparent), transparent 62%);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.table-tools {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 6%, transparent), transparent);
+}
+
+.table-footer {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+/* ── Dialogs: a panel lifted out of the same room ────────────────────────── */
+.dark .dialog-surface {
+  background: color-mix(in oklab, var(--surface) 82%, transparent);
+  backdrop-filter: blur(18px) saturate(1.2);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-overlay), 0 0 80px -30px var(--bloom);
+}
+
+.dark .dialog-backdrop {
+  background: radial-gradient(60rem 40rem at 50% 0%, color-mix(in oklab, var(--accent-2) 14%, transparent), rgb(2 6 14 / 0.78));
+}
+
+/* ── Kiosk: the showpiece screen ─────────────────────────────────────────── */
+.dark .kiosk-shell,
+.dark [class*="kiosk"] {
+  --bloom: rgba(77, 225, 255, 0.5);
+}
+
+/* ── Sidebar: a lit rail ─────────────────────────────────────────────────── */
+.dark .app-sidebar {
+  border-inline-end: 1px solid var(--border);
+  box-shadow: inset -1px 0 0 color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.dark .sidebar-account,
+.dark .sidebar-search {
+  background: color-mix(in oklab, var(--surface-2) 55%, transparent);
+  border: 1px solid var(--border);
+}
+
+/* Group labels read as console sections. */
+.app-sidebar .nav-group-label,
+.app-sidebar [class*="uppercase"] {
+  letter-spacing: 0.18em;
+  color: color-mix(in oklab, var(--accent) 45%, var(--muted));
+}
+
+

@@ -25,6 +25,7 @@ async function session(email, password) {
   });
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${email}: ${e.message}`));
+  // Left for window.alert (a generated password); confirmations use an in-page dialog.
   page.on("dialog", (d) => d.accept(d.type() === "prompt" ? "ok" : undefined));
   await page.goto(`${BASE}/login`);
   await page.fill("#email", email);
@@ -95,6 +96,7 @@ const emp = await session("fatima.khan@demo.local", "Demo@1234");
   check("correction submitted", await toast(page, /Correction request submitted|already have a pending/));
 
   await page.goto(`${BASE}/employees`);
+  await page.waitForURL(/dashboard/);
   check("employee blocked from admin page", page.url().includes("/dashboard"));
   const r = await page.request.get(`${BASE}/api/export`);
   check("employee blocked from export", r.status() === 403);
@@ -148,6 +150,7 @@ const adm = await session(ADMIN_EMAIL, ADMIN_PW);
   await page.goto(`${BASE}/employees`);
   await shot(page, "13-employees");
   await page.keyboard.press("Control+k");
+  await page.locator("[aria-label='Command palette']").waitFor();
   check("command palette opens", await page.locator("[aria-label='Command palette']").isVisible());
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: /اردو/ }).click();
