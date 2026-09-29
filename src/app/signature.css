@@ -413,3 +413,14 @@ table.data thead th {
 }
 
 
+
+/* ── Switching theme ─────────────────────────────────────────────────────── */
+/* For the frame in which the palette changes, nothing animates: hundreds of elements easing
+   their colours at once is what made the switch feel slow. They snap, which reads as instant. */
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+  animation-duration: 0s !important;
+}

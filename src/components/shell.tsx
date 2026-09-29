@@ -92,7 +92,7 @@ export function Shell({
   user: { name: string; email: string; role: string; designation: string | null };
   children: React.ReactNode;
 }) {
-  const { t, theme, lang } = usePrefs();
+  const { t, theme, lang, setTheme } = usePrefs();
   const path = usePathname();
   const [drawer, setDrawer] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -158,7 +158,11 @@ export function Shell({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const toggleTheme = () => start(() => setPreference("theme", theme === "dark" ? "light" : "dark"));
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);                          // instant
+    void setPreference("theme", next);       // remembered for the next visit
+  };
   const toggleLang = () => start(() => setPreference("lang", lang === "ur" ? "en" : "ur"));
 
   const groups = [...new Set(nav.map((n) => n.group))];

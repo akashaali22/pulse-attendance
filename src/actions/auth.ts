@@ -64,5 +64,8 @@ export async function setPreference(name: "lang" | "theme", value: string) {
   const allowed = { lang: ["en", "ur"], theme: ["dark", "light"] }[name];
   if (!allowed?.includes(value)) return;
   (await cookies()).set(name, value, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
-  revalidatePath("/", "layout");
+  // Language changes the text the server rendered, so the tree has to come back. Theme only
+  // changes a class on <html>, which the browser has already flipped — re-rendering everything
+  // for it is what made the switch feel slow.
+  if (name === "lang") revalidatePath("/", "layout");
 }

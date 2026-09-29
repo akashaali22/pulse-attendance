@@ -148,6 +148,8 @@ BASE=http://localhost:3000 node scripts/e2e-smoke.mjs     # app end-to-end (uses
 BASE=http://localhost:3000 node scripts/password-test.mjs # password visibility rules
 BASE=http://localhost:3000 node scripts/forgot-password-test.mjs  # reset requests and admin recovery
 BASE=http://localhost:3000 node scripts/retry-test.mjs            # a form still works after a rejection
+BASE=http://localhost:3000 node scripts/theme-switch-test.mjs     # dark/light changes on the spot
+BASE=http://localhost:3000 node scripts/perf-test.mjs             # page load and scrolling budgets
 BASE=http://localhost:3000 node scripts/agent-api-test.mjs        # agent API incl. offline sync
 node scripts/agent-lifecycle-test.mjs --email you@company.com     # real PC test incl. a restart
 node scripts/backup-race-test.mjs --repo <owner/repo> --token <t> # two instances, one snapshot
