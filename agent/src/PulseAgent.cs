@@ -19,25 +19,66 @@ using Microsoft.Win32;
 
 [assembly: System.Reflection.AssemblyTitle("Pulse Attendance Agent")]
 [assembly: System.Reflection.AssemblyProduct("Pulse Attendance")]
-[assembly: System.Reflection.AssemblyVersion("1.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0.0")]
 
 namespace PulseAgent
 {
     internal static class Program
     {
-        public const string Version = "1.0.0";
+        public const string Version = "1.1.0";
+        public const string Server = "https://pulse-attendance.onrender.com";
+        private static string UserKey { get { return System.Security.Principal.WindowsIdentity.GetCurrent().User.Value; } }
+        private static string StopName { get { return "Local\\PulseAttendanceStop-" + UserKey; } }
+        private static bool Install()
+        {
+            string target = Path.Combine(Config.Dir, "PulseAgent.exe");
+            if (string.Equals(Application.ExecutablePath, target, StringComparison.OrdinalIgnoreCase)) return false;
+            Directory.CreateDirectory(Config.Dir);
+            try
+            {
+                if (File.Exists(target))
+                {
+                    var existing = new Version(FileVersionInfo.GetVersionInfo(target).FileVersion);
+                    if (existing > new Version(Version)) throw new Exception("A newer version is already installed.");
+                }
+                try { using (var stop = EventWaitHandle.OpenExisting(StopName)) stop.Set(); } catch (WaitHandleCannotBeOpenedException) { }
+                for (int i = 0; ; i++)
+                {
+                    try { File.Copy(Application.ExecutablePath, target, true); break; }
+                    catch (IOException) { if (i >= 30) throw; Thread.Sleep(500); }
+                }
+                Process.Start(target);
+            }
+            catch (Exception ex) { MessageBox.Show("Could not install Pulse Attendance. Close the old app and try again.\n" + ex.Message); }
+            return true;
+        }
 
         [STAThread]
         private static void Main(string[] args)
         {
+            try {
+                using (var legacy = Mutex.OpenExisting("Global\\PulseAttendanceAgent")) {
+                    MessageBox.Show("An older Pulse Attendance app is running. Right-click its tray icon, choose Exit, then open this installer again.");
+                    return;
+                }
+            } catch (WaitHandleCannotBeOpenedException) { }
+            if (Install()) return;
             bool created;
-            using (var mutex = new Mutex(true, "Global\\PulseAttendanceAgent", out created))
+            using (var mutex = new Mutex(true, "Local\\PulseAttendanceAgent-" + UserKey, out created))
             {
                 if (!created) return; // already running for this Windows user
                 ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
-                Application.Run(new AgentContext());
+                using (var stop = new EventWaitHandle(false, EventResetMode.AutoReset, StopName))
+                {
+                    var context = new AgentContext();
+                    var watcher = new System.Windows.Forms.Timer { Interval = 500 };
+                    watcher.Tick += delegate { if (stop.WaitOne(0)) { watcher.Stop(); Application.Exit(); } };
+                    watcher.Start();
+                    Application.Run(context);
+                    watcher.Dispose();
+                }
             }
         }
     }
@@ -114,6 +155,7 @@ namespace PulseAgent
 
     internal class QueuedEvent
     {
+        public string Id;
         public string Type;      // IN | OUT
         public string Reason;
         public long Utc;         // DateTime.UtcNow.Ticks when it happened (used only after a restart)
@@ -139,6 +181,9 @@ namespace PulseAgent
                         try { _items = File.Exists(FilePath) ? Json.Deserialize<List<QueuedEvent>>(File.ReadAllText(FilePath)) : null; }
                         catch { _items = null; }
                         if (_items == null) _items = new List<QueuedEvent>();
+                        bool migrated = false;
+                        foreach (var item in _items) if (string.IsNullOrEmpty(item.Id)) { item.Id = Guid.NewGuid().ToString("N"); migrated = true; }
+                        if (migrated) Persist();
                     }
                     return _items;
                 }
@@ -147,7 +192,7 @@ namespace PulseAgent
 
         public static void Add(QueuedEvent e)
         {
-            lock (Gate) { Items.Add(e); if (Items.Count > 500) Items.RemoveAt(0); Persist(); }
+            lock (Gate) { if (string.IsNullOrEmpty(e.Id)) e.Id = Guid.NewGuid().ToString("N"); Items.Add(e); Persist(); }
         }
 
         public static List<QueuedEvent> Snapshot()
@@ -167,7 +212,12 @@ namespace PulseAgent
 
         private static void Persist()
         {
-            try { Directory.CreateDirectory(Config.Dir); File.WriteAllText(FilePath, Json.Serialize(_items)); } catch { }
+            try {
+                Directory.CreateDirectory(Config.Dir);
+                string temp = FilePath + ".tmp";
+                File.WriteAllText(temp, Json.Serialize(_items));
+                if (File.Exists(FilePath)) File.Replace(temp, FilePath, null); else File.Move(temp, FilePath);
+            } catch { }
         }
     }
 
@@ -260,6 +310,7 @@ namespace PulseAgent
             menu.Items.Add(_statusItem);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("Open dashboard", null, delegate { OpenDashboard(); });
+            menu.Items.Add("Check for updates (v" + Program.Version + ")", null, delegate { CheckUpdate(); });
             menu.Items.Add("Sync now", null, delegate { ThreadPool.QueueUserWorkItem(delegate { Tick(true); }); });
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("Sign out this PC…", null, delegate { Unpair(); });
@@ -367,6 +418,7 @@ namespace PulseAgent
             try
             {
                 var pending = EventQueue.Snapshot();
+                if (pending.Count > 199) pending = pending.GetRange(0, 199);
                 var events = new List<Dictionary<string, object>>();
                 long nowMono = Mono.ElapsedMilliseconds;
                 foreach (var q in pending)
@@ -377,7 +429,7 @@ namespace PulseAgent
                         : (long)(DateTime.UtcNow - new DateTime(q.Utc, DateTimeKind.Utc)).TotalMilliseconds;
                     events.Add(new Dictionary<string, object>
                     {
-                        { "type", q.Type }, { "reason", q.Reason }, { "ageMs", Math.Max(0, age) },
+                        { "id", q.Id }, { "type", q.Type }, { "reason", q.Reason }, { "ageMs", Math.Max(0, age) },
                         { "queued", !sameProcess || age > 120000 },
                         { "trusted", sameProcess }
                     });
@@ -393,6 +445,7 @@ namespace PulseAgent
 
                 var resp = Api.Send(_config.Server, "/api/agent/event", _config.Token,
                     new Dictionary<string, object> { { "events", events } }, timeoutMs);
+                if (!resp.ContainsKey("accepted") || Convert.ToInt32(resp["accepted"]) != events.Count) throw new Exception("Attendance acknowledgement missing; retrying safely.");
                 EventQueue.Remove(pending.Count);
                 Interlocked.Exchange(ref _maxGapMs, 0);
                 _authFailedShown = false;
@@ -495,6 +548,31 @@ namespace PulseAgent
             else action();
         }
 
+        private void CheckUpdate()
+        {
+            ThreadPool.QueueUserWorkItem(delegate {
+                try {
+                    var release = Api.Send(Program.Server, "/api/agent/release", null, null, 60000);
+                    if (new Version(Convert.ToString(release["windowsVersion"])) <= new Version(Program.Version)) {
+                        Balloon("Pulse Attendance", "You have the latest version.", ToolTipIcon.Info); return;
+                    }
+                    RunOnUi(delegate {
+                        if (MessageBox.Show("A new version is available. Download and install it now?", "Pulse Attendance", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+                        ThreadPool.QueueUserWorkItem(delegate {
+                            try {
+                                string file = Path.Combine(Path.GetTempPath(), "PulseAgent-" + Guid.NewGuid().ToString("N") + ".exe");
+                                using (var client = new WebClient()) client.DownloadFile(Program.Server + "/api/agent/download", file);
+                                string digest;
+                                using (var sha = SHA256.Create()) using (var stream = File.OpenRead(file)) digest = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+                                if (digest != Convert.ToString(release["windowsSha256"])) { File.Delete(file); throw new Exception("Download verification failed. Please try again."); }
+                                Process.Start(file);
+                            } catch (Exception ex) { Balloon("Update failed", ex.Message, ToolTipIcon.Warning); }
+                        });
+                    });
+                } catch (Exception ex) { Balloon("Update check failed", ex.Message, ToolTipIcon.Warning); }
+            });
+        }
+
         private void OpenDashboard()
         {
             if (string.IsNullOrEmpty(_config.Server)) return;
@@ -521,6 +599,8 @@ namespace PulseAgent
         {
             if (MessageBox.Show("Unlink this PC from " + (_config.Employee ?? "your account") + "?\nAttendance will no longer be recorded automatically.",
                 "Pulse Attendance", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            try { Api.Send(_config.Server, "/api/agent/unpair", _config.Token, new Dictionary<string, object>(), 25000); }
+            catch { MessageBox.Show("Connect to the internet and try again. This PC has not been unlinked yet."); return; }
             _config.Token = null;
             _config.Employee = null;
             _config.Save();
@@ -587,135 +667,56 @@ namespace PulseAgent
     internal class PairForm : Form
     {
         public string ServerUrl, Token, Employee;
-        public bool AutoStart;
-
-        private readonly TextBox _server = new TextBox();
-        private readonly TextBox _email = new TextBox();
-        private readonly TextBox _password = new TextBox { UseSystemPasswordChar = true };
-        private readonly CheckBox _autostart = new CheckBox { Text = "Start automatically with Windows", Checked = true, AutoSize = true };
-        private readonly Button _ok = new Button { Text = "Link this PC", Width = 140, Height = 34 };
-        private readonly Label _error = new Label { ForeColor = Color.FromArgb(240, 82, 82), AutoSize = false, Height = 36 };
-
-        public PairForm(string server)
+        public bool AutoStart = true;
+        private readonly Label _message = new Label { Location = new Point(24, 65), Size = new Size(390, 120) };
+        private readonly Button _retry = new Button { Text = "Connect using browser", Location = new Point(24, 220), Size = new Size(230, 36) };
+        private volatile bool _closed;
+        public PairForm(string ignored)
         {
-            Text = "Pulse Attendance — Link this PC";
+            Text = "Pulse Attendance - Connect this PC";
+            ClientSize = new Size(445, 280);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
-            MinimizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(420, 360);
-            BackColor = Color.FromArgb(15, 17, 23);
-            ForeColor = Color.FromArgb(243, 245, 250);
-            Font = new Font("Segoe UI", 9.5f);
-            TopMost = true;
-
-            var title = new Label { Text = "Automatic attendance", Font = new Font("Segoe UI Semibold", 15f), AutoSize = true, Location = new Point(24, 18) };
-            var sub = new Label
-            {
-                Text = "Sign in once. After that, check-in and check-out happen when you log on, lock and shut down this PC.",
-                ForeColor = Color.FromArgb(125, 132, 151), Location = new Point(26, 52), Size = new Size(370, 40)
-            };
-            Controls.Add(title);
-            Controls.Add(sub);
-
-            _server.Text = string.IsNullOrEmpty(server) ? DefaultServer() : server;
-            AddField("Server address", _server, 100);
-            AddField("Email", _email, 155);
-            AddField("Password", _password, 210);
-
-            _autostart.Location = new Point(26, 262);
-            _autostart.ForeColor = Color.FromArgb(180, 186, 203);
-            Controls.Add(_autostart);
-
-            _error.Location = new Point(26, 286);
-            _error.Width = 370;
-            Controls.Add(_error);
-
-            _ok.Location = new Point(256, 314);
-            _ok.FlatStyle = FlatStyle.Flat;
-            _ok.FlatAppearance.BorderSize = 0;
-            _ok.BackColor = Color.FromArgb(124, 124, 255);
-            _ok.ForeColor = Color.White;
-            _ok.Click += delegate { Pair(); };
-            Controls.Add(_ok);
-            AcceptButton = _ok;
+            Controls.Add(new Label { Text = "Connect your account", Font = new Font("Segoe UI", 16f), AutoSize = true, Location = new Point(24, 20) });
+            _message.Text = "Your browser will open. If you are already signed in, just confirm your account - no password needed.";
+            Controls.Add(_message); Controls.Add(_retry);
+            _retry.Click += delegate { Pair(); };
+            FormClosed += delegate { _closed = true; };
+            Shown += delegate { Pair(); };
         }
-
-        private void AddField(string label, TextBox box, int y)
-        {
-            Controls.Add(new Label { Text = label, Location = new Point(26, y), AutoSize = true, ForeColor = Color.FromArgb(180, 186, 203) });
-            box.Location = new Point(26, y + 22);
-            box.Width = 368;
-            box.BorderStyle = BorderStyle.FixedSingle;
-            box.BackColor = Color.FromArgb(22, 25, 35);
-            box.ForeColor = Color.White;
-            Controls.Add(box);
-        }
-
-        // An admin can place "server.txt" next to PulseAgent.exe so employees don't type the address.
-        private static string DefaultServer()
-        {
-            try
-            {
-                var f = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "server.txt");
-                if (File.Exists(f)) return File.ReadAllText(f).Trim();
-            }
-            catch { }
-            return "http://";
-        }
-
-        // Keeps only scheme + host + port, so "localhost:3300/login" or a pasted dashboard URL still works.
-        private static string NormalizeServer(string text)
-        {
-            string s = (text ?? "").Trim();
-            if (s.Length == 0 || s == "http://" || s == "https://") return null;
-            if (!s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) s = "http://" + s;
-            Uri uri;
-            if (!Uri.TryCreate(s, UriKind.Absolute, out uri) || string.IsNullOrEmpty(uri.Host)) return null;
-            return uri.GetLeftPart(UriPartial.Authority);
-        }
-
+        private void Ui(MethodInvoker action) { if (!_closed && IsHandleCreated) { try { BeginInvoke(action); } catch (InvalidOperationException) { } } }
         private void Pair()
         {
-            _error.Text = "";
-            string server = NormalizeServer(_server.Text);
-            if (server == null)
-            {
-                _error.Text = "Enter the server address, e.g. http://192.168.1.10:3300";
-                return;
-            }
-            _server.Text = server;
-            _ok.Enabled = false;
-            _ok.Text = "Linking…";
-            string email = _email.Text.Trim(), password = _password.Text, device = Environment.MachineName + " \\ " + Environment.UserName;
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                try
-                {
-                    var resp = Api.Send(server, "/api/agent/pair", null, new Dictionary<string, object>
-                    {
-                        { "email", email }, { "password", password }, { "device", device }, { "version", Program.Version }
-                    }, 10000);
-                    var status = resp["status"] as Dictionary<string, object>;
-                    BeginInvoke((MethodInvoker)delegate
-                    {
-                        ServerUrl = server;
-                        Token = Convert.ToString(resp["token"]);
-                        Employee = status == null ? email : Convert.ToString(status["employee"]);
-                        AutoStart = _autostart.Checked;
-                        DialogResult = DialogResult.OK;
-                        Close();
-                    });
-                }
-                catch (Exception ex)
-                {
-                    BeginInvoke((MethodInvoker)delegate
-                    {
-                        _error.Text = ex.Message;
-                        _ok.Enabled = true;
-                        _ok.Text = "Link this PC";
-                    });
-                }
+            _retry.Enabled = false;
+            _message.Text = "Opening your browser...";
+            ThreadPool.QueueUserWorkItem(delegate {
+                try {
+                    string secret;
+                    using (var rng = RandomNumberGenerator.Create()) { byte[] bytes = new byte[32]; rng.GetBytes(bytes); secret = BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant(); }
+                    var request = Api.Send(Program.Server, "/api/agent/link", null, new Dictionary<string, object> {
+                        { "secret", secret }, { "device", Environment.MachineName + " / " + Environment.UserName }, { "version", Program.Version }
+                    }, 60000);
+                    string code = Convert.ToString(request["code"]);
+                    Ui(delegate { _message.Text = "In your browser, choose Continue as your name.\n\nMatching code: " + code.Substring(0, 8).ToUpperInvariant() + "\n\nWaiting for your approval (up to 5 minutes)..."; });
+                    Process.Start(Program.Server + "/link-device?code=" + Uri.EscapeDataString(code));
+                    var deadline = DateTime.UtcNow.AddMinutes(5);
+                    while (!_closed && DateTime.UtcNow < deadline) {
+                        Thread.Sleep(2000);
+                        Dictionary<string, object> result;
+                        try { result = Api.Send(Program.Server, "/api/agent/link", null, new Dictionary<string, object> { { "code", code }, { "secret", secret } }, 25000); }
+                        catch (ApiException ex) { if (ex.Status == 0) continue; throw; }
+                        if (result.ContainsKey("error")) throw new Exception(Convert.ToString(result["error"]));
+                        if (!result.ContainsKey("token")) continue;
+                        var status = result["status"] as Dictionary<string, object>;
+                        Ui(delegate {
+                            ServerUrl = Program.Server; Token = Convert.ToString(result["token"]);
+                            Employee = Convert.ToString(status["employee"]); DialogResult = DialogResult.OK; Close();
+                        });
+                        return;
+                    }
+                    throw new Exception("Link expired. Click Connect using browser to try again.");
+                } catch (Exception ex) { Ui(delegate { _message.Text = ex.Message; _retry.Enabled = true; }); }
             });
         }
     }

@@ -37,7 +37,10 @@ That assembles `Pulse Attendance.app` from [app/](app/), gives it the dashboard'
 ad-hoc, and writes `agent/bin/PulseAgent.dmg` plus its `.sha256`. Commit both — the server hands the
 image to employees at `/api/agent/download/mac-dmg`, exactly as it hands `PulseAgent.exe` to Windows.
 
-`--server` only pre-fills the address in the first-run dialog; employees can still change it.
+`--server` sets the internal company address at build time; employees never see an address field.
+Opening the app starts a five-minute browser approval. Existing browser logins are reused;
+confirm the matching code and account without entering a password in the app.
+Use **Check for updates** in the app to download a checksum-verified disk image.
 
 ## The free way to install without any warning
 

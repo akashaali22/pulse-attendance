@@ -21,6 +21,9 @@
 /agent/bin/*
 !/agent/bin/PulseAgent.exe
 !/agent/bin/PulseAgent.exe.sha256
+!/agent/bin/PulseAgent-1.1.0.exe
+!/agent/bin/PulseAgent-1.1.0.exe.sha256
+!/agent/bin/PulseAgent.dmg.version
 !/agent/bin/PulseAgent.dmg
 !/agent/bin/PulseAgent.dmg.sha256
 

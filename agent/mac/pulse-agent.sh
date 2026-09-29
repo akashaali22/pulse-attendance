@@ -18,7 +18,8 @@ CONFIG="${APP_DIR}/config"
 QUEUE="${APP_DIR}/queue"
 LOG="${HOME}/Library/Logs/PulseAgent.log"
 KEYCHAIN_SERVICE="PulseAttendanceAgent"
-VERSION="1.0.0"
+VERSION="1.1.0"
+DEFAULT_SERVER="https://pulse-attendance.onrender.com"
 HEARTBEAT_SECONDS=60
 CLOCK_JUMP_TOLERANCE=120   # a bigger jump than this means the clock was changed or the Mac slept
 
@@ -51,21 +52,23 @@ is_locked() {
 }
 
 # ── event queue: one JSON-ish record per line "epoch|type|reason|trusted" ─────────────────────────
-queue_add() { printf '%s|%s|%s|%s\n' "$(date +%s)" "$1" "$2" "${TRUSTED:-true}" >>"${QUEUE}"; }
+queue_add() { printf '%s|%s|%s|%s|%s\n' "$(date +%s)" "$1" "$2" "${TRUSTED:-true}" "$(uuidgen)" >>"${QUEUE}"; }
 
 send_events() { # $1 = extra events JSON (may be empty)
-  local token server payload events line age now type reason trusted first=1
+  local token server payload events line age now type reason trusted event_id count=0 first=1
   token="$(token_get)"; server="${SERVER}"
   [ -n "${token}" ] && [ -n "${server}" ] || return 1
   now="$(date +%s)"
   events=""
   if [ -s "${QUEUE}" ]; then
-    while IFS='|' read -r ts type reason trusted; do
+    while IFS='|' read -r ts type reason trusted event_id; do
+      [ "${count}" -lt 199 ] || break
+      count=$(( count + 1 ))
       [ -n "${ts:-}" ] || continue
       age=$(( (now - ts) * 1000 )); [ "${age}" -lt 0 ] && age=0
       [ ${first} -eq 1 ] || events="${events},"
       first=0
-      events="${events}{\"type\":\"${type}\",\"reason\":\"${reason}\",\"ageMs\":${age},\"queued\":true,\"trusted\":${trusted}}"
+      events="${events}{\"id\":\"${event_id}\",\"type\":\"${type}\",\"reason\":\"${reason}\",\"ageMs\":${age},\"queued\":true,\"trusted\":${trusted}}"
     done <"${QUEUE}"
   fi
   if [ -n "${1:-}" ]; then
@@ -82,8 +85,16 @@ send_events() { # $1 = extra events JSON (may be empty)
     --data "${payload}" "${server}/api/agent/event" 2>>"${LOG}")" || return 1
   status="$(printf '%s' "${body}" | tail -n1)"
   case "${status}" in
-    200) : >"${QUEUE}"; printf '%s' "${body}" | sed '$d' >"${APP_DIR}/last-status.json" 2>/dev/null; return 0 ;;
-    401) log "device is no longer linked (401) — run: pulse-agent.sh pair"; return 2 ;;
+    200)
+      local accepted expected="${count}"
+      [ -z "${1:-}" ] || expected=$(( expected + 1 ))
+      accepted="$(printf '%s' "${body}" | sed '$d' | json_value accepted)"
+      [ "${accepted}" = "${expected}" ] || return 1
+      if [ -f "${QUEUE}" ]; then tail -n +$(( count + 1 )) "${QUEUE}" >"${QUEUE}.next" && mv "${QUEUE}.next" "${QUEUE}"; fi
+      printf '%s' "${body}" | sed '$d' >"${APP_DIR}/last-status.json"
+      rm -f "${APP_DIR}/revoked"
+      return 0 ;;
+    401) touch "${APP_DIR}/revoked"; log "Disconnected. Open Pulse Attendance to reconnect."; return 2 ;;
     *)   log "server answered ${status}"; return 1 ;;
   esac
 }
@@ -93,36 +104,45 @@ status_field() { # crude JSON field read, enough for the few values we show
 }
 
 # ── commands ─────────────────────────────────────────────────────────────────────────────────────
-cmd_pair() {
-  local server="${1:-}" email="${2:-}" password
-  load_config
-  [ -n "${server}" ] || { printf 'Server address: '; read -r server; }
-  [ -n "${email}" ] || { printf 'Email: '; read -r email; }
-  printf 'Password: '; stty -echo 2>/dev/null; read -r password; stty echo 2>/dev/null; printf '\n'
-  server="$(normalize_server "${server}")"
+json_value() { /usr/bin/plutil -extract "$1" raw -o - - 2>/dev/null; }
 
-  local body status token
-  body="$(curl -sS --max-time 25 -w '\n%{http_code}' -X POST -H "Content-Type: application/json" \
-    --data "{\"email\":\"$(json_escape "${email}")\",\"password\":\"$(json_escape "${password}")\",\"device\":\"$(json_escape "$(scutil --get ComputerName 2>/dev/null || hostname) \\ ${AGENT_USER}")\",\"version\":\"${VERSION}\"}" \
-    "${server}/api/agent/pair")" || { say "Cannot reach ${server}"; exit 1; }
-  status="$(printf '%s' "${body}" | tail -n1)"
-  if [ "${status}" != "200" ]; then
-    say "Pairing failed (HTTP ${status}): $(printf '%s' "${body}" | sed '$d')"
-    exit 1
-  fi
-  token="$(printf '%s' "${body}" | sed '$d' | sed -E 's/.*"token":"([^"]+)".*/\1/')"
-  [ -n "${token}" ] && [ "${token}" != "${body}" ] || { say "Server did not return a token"; exit 1; }
-  SERVER="${server}"
-  EMPLOYEE="$(printf '%s' "${body}" | sed '$d' | sed -E 's/.*"employee":"([^"]+)".*/\1/')"
-  token_set "${token}"
-  save_config
-  : >"${QUEUE}"
-  say "Linked as ${EMPLOYEE}. Attendance is now automatic on this Mac."
-  log "paired as ${EMPLOYEE} with ${SERVER}"
+cmd_pair() {
+  local server="${1:-${DEFAULT_SERVER}}" secret code body token employee deadline
+  case "${server}" in https://*) ;; *) say "A secure company server is required."; exit 1 ;; esac
+  secret="$(openssl rand -hex 32)" || exit 1
+  body="$(curl -fsS --max-time 60 -H 'Content-Type: application/json' --data "{\"secret\":\"${secret}\",\"device\":\"$(json_escape "$(scutil --get ComputerName 2>/dev/null || hostname) / ${AGENT_USER}")\",\"version\":\"${VERSION}\"}" "${server}/api/agent/link")" || { say "Cannot connect. Check your internet and try again."; exit 1; }
+  code="$(printf '%s' "${body}" | json_value code)"
+  [ -n "${code}" ] || { say "Could not start linking. Please try again."; exit 1; }
+  printf '%s' "${code:0:8}" | tr '[:lower:]' '[:upper:]' >"${APP_DIR}/link-code"
+  say "Continue in your browser. Matching code: $(cat "${APP_DIR}/link-code")"
+  open "${server}/link-device?code=${code}"
+  deadline=$(( $(date +%s) + 300 ))
+  while [ "$(date +%s)" -lt "${deadline}" ]; do
+    sleep 2
+    body="$(curl -fsS --max-time 25 -H 'Content-Type: application/json' --data "{\"code\":\"${code}\",\"secret\":\"${secret}\"}" "${server}/api/agent/link")" || continue
+    if printf '%s' "${body}" | json_value error >/dev/null; then printf '%s' "${body}" | json_value error; exit 1; fi
+    token="$(printf '%s' "${body}" | json_value token)"
+    [ -n "${token}" ] || continue
+    employee="$(printf '%s' "${body}" | json_value status.employee)"
+    token_set "${token}" || { say "Could not save login in Keychain. Unlock Keychain and try again."; exit 1; }
+    SERVER="${server}"; EMPLOYEE="${employee}"
+    save_config
+    : >"${QUEUE}"
+    rm -f "${APP_DIR}/revoked" "${APP_DIR}/link-code"
+    say "Connected. Attendance is now automatic on this Mac."
+    return 0
+  done
+  say "Link expired. Open the app to try again."
+  exit 1
 }
 
 cmd_unpair() {
   load_config
+  local token
+  token="$(token_get)"
+  if [ -n "${token}" ]; then
+    curl -fsS --max-time 25 -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' --data '{}' "${SERVER}/api/agent/unpair" >/dev/null || { say "Connect to the internet and try unlinking again."; exit 1; }
+  fi
   token_delete
   rm -f "${CONFIG}" "${QUEUE}" "${APP_DIR}/last-status.json"
   say "This Mac is no longer linked."
@@ -132,7 +152,8 @@ cmd_unpair() {
 cmd_status() {
   load_config
   if [ -z "${SERVER}" ] || [ -z "$(token_get)" ]; then say "Not linked. Run: pulse-agent.sh pair"; exit 1; fi
-  say "Server:   ${SERVER}"
+  [ ! -f "${APP_DIR}/revoked" ] || { say "Disconnected. Open the app to reconnect."; exit 1; }
+  say "Version:  ${VERSION}"
   say "Employee: ${EMPLOYEE}"
   say "Status:   $(status_field status) · worked $(status_field workedMin)m"
   say "Queued:   $(wc -l <"${QUEUE}" 2>/dev/null | tr -d ' ') event(s) waiting"
@@ -142,7 +163,25 @@ cmd_status() {
 cmd_run() {
   load_config
   [ -n "${SERVER}" ] && [ -n "$(token_get)" ] || { log "not linked — exiting"; exit 1; }
-  log "agent started (server ${SERVER})"
+  local lock="${APP_DIR}/run.lock"
+  if ! mkdir "${lock}" 2>/dev/null; then
+    local old_pid
+    old_pid="$(cat "${lock}/pid" 2>/dev/null || true)"
+    if [ -n "${old_pid}" ] && kill -0 "${old_pid}" 2>/dev/null; then exit 0; fi
+    rm -f "${lock}/pid"; rmdir "${lock}" 2>/dev/null || exit 1
+    mkdir "${lock}" || exit 1
+  fi
+  printf '%s' "$$" >"${lock}/pid"
+  trap 'rm -f "${lock}/pid"; rmdir "${lock}" 2>/dev/null || true' EXIT
+  # Give legacy queued records stable IDs before their first retry.
+  if [ -s "${QUEUE}" ]; then
+    local ts type reason trusted event_id
+    while IFS='|' read -r ts type reason trusted event_id; do
+      printf '%s|%s|%s|%s|%s\n' "${ts}" "${type}" "${reason}" "${trusted}" "${event_id:-$(uuidgen)}"
+    done <"${QUEUE}" >"${QUEUE}.migrated"
+    mv "${QUEUE}.migrated" "${QUEUE}"
+  fi
+  log "agent started"
 
   local start_epoch last_tick locked_since=0 TRUSTED=true
   start_epoch="$(date +%s)"
@@ -171,7 +210,7 @@ cmd_run() {
     if [ "${delta}" -gt $(( HEARTBEAT_SECONDS + CLOCK_JUMP_TOLERANCE )) ]; then
       log "clock jumped ${delta}s (sleep or time change)"
       TRUSTED=false
-      queue_add OUT sleep
+      printf '%s|OUT|sleep|false|%s\n' "${last_tick}" "$(uuidgen)" >>"${QUEUE}"
       queue_add IN resume
     fi
     last_tick="${now}"
@@ -195,7 +234,7 @@ cmd_run() {
 
 cmd_selftest() {
   local fails=0
-  for tool in curl ioreg security sed awk; do
+  for tool in curl ioreg security sed awk openssl uuidgen plutil; do
     if command -v "${tool}" >/dev/null 2>&1; then say "ok    ${tool} available"; else say "FAIL  ${tool} missing"; fails=$((fails+1)); fi
   done
   if [ "$(normalize_server 'http://host:3300/login')" = "http://host:3300" ]; then say "ok    server address is cleaned up"; else say "FAIL  normalize_server"; fails=$((fails+1)); fi
@@ -208,7 +247,7 @@ cmd_selftest() {
 }
 
 case "${1:-}" in
-  pair) shift; cmd_pair "${1:-}" "${2:-}" ;;
+  pair) shift; cmd_pair "${1:-${DEFAULT_SERVER}}" ;;
   run) cmd_run ;;
   status) cmd_status ;;
   unpair) cmd_unpair ;;

@@ -30,6 +30,7 @@ fail() { osascript -e "display alert \"${TITLE}\" message \"$1\" as critical" >/
 # Copying it out of the bundle means attendance keeps working if the app is moved or the disk image
 # is ejected, and an updated app simply overwrites it.
 mkdir -p "${APP_DIR}" "${HOME}/Library/LaunchAgents" || fail "Cannot write to your home folder."
+launchctl unload "${PLIST}" >/dev/null 2>&1 || true
 cp "${RES}/pulse-agent.sh" "${AGENT}" || fail "The app is incomplete — download it again."
 chmod +x "${AGENT}"
 
@@ -59,17 +60,35 @@ PLIST_EOF
 
 # ── already linked: show where things stand ──────────────────────────────────────────────────────
 if "${AGENT}" status >/dev/null 2>&1; then
+  install_login_item
   status="$("${AGENT}" status 2>&1)"
-  choice="$(osascript -e "display dialog \"${status//\"/\\\"}\" with title \"${TITLE}\" buttons {\"Unlink this Mac\",\"Open dashboard\",\"Done\"} default button \"Done\"" 2>/dev/null)" || exit 0
+  choice="$(osascript - "${status}" <<'APPLESCRIPT'
+on run argv
+  choose from list {"Open dashboard", "Check for updates", "Unlink this Mac"} with title "Pulse Attendance" with prompt (item 1 of argv)
+end run
+APPLESCRIPT
+)" || exit 0
   case "${choice}" in
     *"Open dashboard"*)
       server="$(sed -n 's/^SERVER=//p' "${APP_DIR}/config" | tr -d "'\"")"
       [ -n "${server}" ] && open "${server}"
       ;;
+    *"Check for updates"*)
+      release="$(curl -fsS --max-time 60 https://pulse-attendance.onrender.com/api/agent/release)" || fail "Could not check for updates. Try again when online."
+      latest="$(printf '%s' "${release}" | /usr/bin/plutil -extract macVersion raw -o - -)"
+      if [ "${latest}" = "1.1.0" ]; then note "You have the latest version (1.1.0)."; exit 0; fi
+      expected="$(printf '%s' "${release}" | /usr/bin/plutil -extract macSha256 raw -o - -)"
+      package="${APP_DIR}/PulseAgent-update.dmg"
+      curl -fsS --max-time 180 https://pulse-attendance.onrender.com/api/agent/download/mac-dmg -o "${package}" || fail "Download failed. Try again."
+      actual="$(shasum -a 256 "${package}" | awk '{print $1}')"
+      [ "${actual}" = "${expected}" ] || fail "Download verification failed. Try again."
+      open "${package}"
+      note "Update verified. Drag Pulse Attendance into Applications, replace the old app, then open it to finish. Your account stays connected."
+      ;;
     *"Unlink"*)
+      "${AGENT}" unpair >/dev/null 2>&1 || fail "Connect to the internet and try unlinking again."
       launchctl unload "${PLIST}" >/dev/null 2>&1 || true
       rm -f "${PLIST}"
-      "${AGENT}" unpair >/dev/null 2>&1
       note "This Mac is no longer linked. Open the app again to link it to another account."
       ;;
   esac
@@ -77,16 +96,19 @@ if "${AGENT}" status >/dev/null 2>&1; then
 fi
 
 # ── first run: link this Mac to an employee ──────────────────────────────────────────────────────
-server_default="$(cat "${RES}/server.txt" 2>/dev/null || true)"
-server="$(ask "Welcome to Pulse Attendance.\n\nThis Mac will record attendance automatically — no buttons to press.\n\nServer address:" "${server_default}")"
-[ -n "${server}" ] || fail "A server address is needed."
-email="$(ask "Sign in once with the employee's work account.\n\nEmail:" "")"
-[ -n "${email}" ] || fail "An email address is needed."
-password="$(ask "Password for ${email}:" "" hidden)"
-[ -n "${password}" ] || fail "A password is needed."
-
-# cmd_pair reads the password from stdin, so it never appears in the process list.
-out="$(printf '%s\n' "${password}" | "${AGENT}" pair "${server}" "${email}" 2>&1)" || fail "${out//\"/}"
-
+server="$(cat "${RES}/server.txt" 2>/dev/null || true)"
+server="${server:-https://pulse-attendance.onrender.com}"
+rm -f "${APP_DIR}/link-code"
+"${AGENT}" pair "${server}" >"${APP_DIR}/pair-result" 2>&1 &
+pair_pid=$!
+for (( i=0; i<65; i++ )); do
+  [ ! -f "${APP_DIR}/link-code" ] || break
+  kill -0 "${pair_pid}" 2>/dev/null || break
+  sleep 1
+done
+if [ -f "${APP_DIR}/link-code" ]; then
+  note "Continue in your browser to connect this Mac. No password is needed if you are already signed in.\n\nMatching code: $(cat "${APP_DIR}/link-code")"
+fi
+wait "${pair_pid}" || fail "Could not finish connecting. Check your internet, then reopen the app and approve the browser request."
 install_login_item
-note "${out}\n\nPulse Attendance now starts by itself every time you log in. You can close this app — it keeps running in the background."
+note "Connected. Pulse Attendance starts automatically when you log in. You can close this window."

@@ -10,8 +10,8 @@ import { Logo } from "@/components/logo";
 export const metadata: Metadata = { title: "Sign in" };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
-  if (await getUser()) redirect("/dashboard");
   const { next } = await searchParams;
+  if (await getUser()) redirect(next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
   const { t } = await getPrefs();
   const company = getSetting("company_name", "My Company");
 

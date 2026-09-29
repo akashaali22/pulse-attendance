@@ -35,7 +35,7 @@ export default async function DownloadPage() {
       </div>
 
       <AppDownloads origin={origin} host={host} secure={proto === "https" || host.startsWith("localhost")} first={detectOs(h.get("user-agent") ?? "")} />
-      <AgentBehaviour t={t} footer="You sign in inside the app with your own email and password, so it only ever records your own attendance." />
+      <AgentBehaviour t={t} footer="The app connects through your browser. If you are already signed in, confirm your account without entering your password again." />
     </main>
   );
 }

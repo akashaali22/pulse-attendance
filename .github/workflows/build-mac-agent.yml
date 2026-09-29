@@ -71,7 +71,10 @@ jobs:
           test -x "/tmp/dmg/Pulse Attendance.app/Contents/MacOS/PulseAgent" || { echo "launcher missing or not executable"; exit 1; }
           test -f "/tmp/dmg/Pulse Attendance.app/Contents/Resources/pulse-agent.sh" || { echo "agent missing"; exit 1; }
           bash -n "/tmp/dmg/Pulse Attendance.app/Contents/Resources/pulse-agent.sh"
+          bash -n "/tmp/dmg/Pulse Attendance.app/Contents/MacOS/PulseAgent"
           bash "/tmp/dmg/Pulse Attendance.app/Contents/Resources/pulse-agent.sh" selftest
+          printf '{"status":{"employee":"Test employee"}}' | plutil -extract status.employee raw -o - -
+          node scripts/agent-queue-test.mjs
           hdiutil detach /tmp/dmg -quiet
           echo "The image mounts and the app inside it runs."
 
@@ -85,7 +88,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f agent/bin/PulseAgent.dmg agent/bin/PulseAgent.dmg.sha256
+          git add -f agent/bin/PulseAgent.dmg agent/bin/PulseAgent.dmg.sha256 agent/bin/PulseAgent.dmg.version
           if git diff --cached --quiet; then
             echo "The image is unchanged — nothing to commit."
             exit 0

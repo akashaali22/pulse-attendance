@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 export const dynamic = "force-dynamic";
 
-const EXE = path.join(process.cwd(), "agent", "bin", "PulseAgent.exe");
+const EXE = path.join(process.cwd(), "agent", "bin", "PulseAgent-1.1.0.exe");
 
 /**
  * Public, like the macOS installer: the file holds no secrets and the agent still needs the
@@ -11,6 +11,6 @@ const EXE = path.join(process.cwd(), "agent", "bin", "PulseAgent.exe");
 export async function GET() {
   if (!fs.existsSync(EXE)) return new Response("Agent has not been built. Run: npm run build:agent", { status: 404 });
   return new Response(fs.readFileSync(EXE), {
-    headers: { "Content-Type": "application/octet-stream", "Content-Disposition": 'attachment; filename="PulseAgent.exe"' },
+    headers: { "Content-Type": "application/octet-stream", "Content-Disposition": 'attachment; filename="PulseAgent-1.1.0.exe"' },
   });
 }

@@ -9,6 +9,20 @@ export const DATA_DIR = process.env.ATTENDANCE_DATA_DIR ?? path.join(process.cwd
 const DB_FILE = path.join(DATA_DIR, "attendance.db");
 
 const SCHEMA = `
+CREATE TABLE IF NOT EXISTS device_links (
+  code TEXT PRIMARY KEY,
+  secret_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  version TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  consumed INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS agent_receipts (
+  device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  event_id TEXT NOT NULL,
+  PRIMARY KEY(device_id, event_id)
+);
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL

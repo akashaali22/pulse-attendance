@@ -1,0 +1,46 @@
+// Run only against an isolated test server: creates/revokes a test device.
+import assert from "node:assert/strict";
+import crypto from "node:crypto";
+import { chromium } from "playwright-core";
+const base = process.env.BASE ?? "http://localhost:3219";
+if (!/^http:\/\/(localhost|127\.0\.0\.1):/.test(base)) throw new Error("Use an isolated local test server");
+const browser = await chromium.launch({ channel: "msedge", headless: true });
+try {
+  const page = await browser.newPage();
+  const secret = crypto.randomBytes(32).toString("hex");
+  const start = await page.request.post(`${base}/api/agent/link`, { data: { secret, device: "QA browser linked PC", version: "1.1.0" } });
+  assert.equal(start.status(), 200);
+  const { code, verificationPath } = await start.json();
+  const poll = (value = secret) => page.request.post(`${base}/api/agent/link`, { data: { secret: value, code } }).then(r => r.json());
+  assert.deepEqual(await poll(), { pending: true });
+  await page.goto(base + verificationPath);
+  await page.waitForURL(/login\?next=/);
+  await page.fill("#email", "admin@company.com");
+  await page.fill("#password", "Admin@123");
+  await page.click("button[type=submit]");
+  await page.waitForURL(/link-device\?code=/);
+  await page.getByRole("button", { name: /^Continue as/ }).click();
+  await page.getByRole("status").waitFor();
+  assert.ok((await poll("f".repeat(64))).error);
+  const result = await poll();
+  assert.ok(result.token);
+  assert.ok((await poll()).error);
+  const headers = { Authorization: `Bearer ${result.token}` };
+  const events = Array.from({ length: 201 }, (_, i) => ({ id: `qa-${i}`, type: "OUT", ageMs: 0, reason: "manual" }));
+  assert.equal((await page.request.post(base + "/api/agent/event", { headers, data: { events } })).status(), 400);
+  const single = { events: [events[0]] };
+  assert.equal((await (await page.request.post(base + "/api/agent/event", { headers, data: single })).json()).accepted, 1);
+  assert.equal((await (await page.request.post(base + "/api/agent/event", { headers, data: single })).json()).results[0].note, "already received");
+  await page.request.post(base + "/api/agent/unpair", { headers, data: {} });
+  assert.equal((await page.request.get(base + "/api/agent/event", { headers })).status(), 401);
+  const next = await (await page.request.post(base + "/api/agent/link", { data: { secret, device: "QA existing session" } })).json();
+  await page.goto(base + next.verificationPath);
+  await page.getByRole("button", { name: /^Continue as/ }).waitFor();
+  assert.ok(!page.url().includes("/login"));
+  await page.goto(base + "/download");
+  assert.equal(await page.getByText("Server address:", { exact: false }).count(), 0);
+  const release = await (await page.request.get(base + "/api/agent/release")).json();
+  const exe = await page.request.get(base + "/api/agent/download");
+  assert.equal(crypto.createHash("sha256").update(await exe.body()).digest("hex"), release.windowsSha256);
+  console.log("PASS login return, existing browser session, confirmation, wrong secret, single use, batch limit, deduplication, revocation, hidden server and EXE checksum");
+} finally { await browser.close(); }

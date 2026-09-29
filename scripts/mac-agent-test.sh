@@ -33,11 +33,13 @@ status_of() {
     sed -E 's/.*"status":"([A-Z_]+)".*/\1/'
 }
 
-# ── 1. pairing ──
-printf '%s\n' "${PASSWORD}" | bash "${AGENT}" pair "${BASE}/login" "${EMAIL}" >"${SANDBOX}/pair.out" 2>&1
-if grep -q "Linked as" "${SANDBOX}/pair.out"; then check "pairs with the server" 1 "$(head -1 "${SANDBOX}/pair.out")"; else check "pairs with the server" 0 "$(head -2 "${SANDBOX}/pair.out" | tr '\n' ' ')"; fi
-if [ -s "${APPDIR}/token" ]; then check "token stored" 1; else check "token stored" 0; fi
-if grep -q "/login" "${APPDIR}/config" 2>/dev/null; then check "a pasted /login URL is cleaned to the server address" 0 "$(grep SERVER "${APPDIR}/config")"; else check "a pasted /login URL is cleaned to the server address" 1 "$(grep SERVER "${APPDIR}/config" 2>/dev/null)"; fi
+# The browser pairing UI is covered by device-link-test.mjs. Seed a fixture via the legacy API
+# so these lifecycle checks remain independent of the browser.
+body="$(curl -fsS -H 'Content-Type: application/json' --data "{\"email\":\"${EMAIL}\",\"password\":\"${PASSWORD}\",\"device\":\"Mac lifecycle fixture\"}" "${BASE}/api/agent/pair")"
+printf '%s' "${body}" | sed -E 's/.*"token":"([^"]+)".*/\1/' >"${APPDIR}/token"
+printf 'SERVER=%q\nEMPLOYEE=%q\n' "${BASE}" "Lifecycle fixture" >"${APPDIR}/config"
+: >"${APPDIR}/queue"
+if [ -s "${APPDIR}/token" ]; then check "fixture token stored" 1; else check "fixture token stored" 0; fi
 
 # ── 2. running: check-in and heartbeats ──
 bash "${AGENT}" run & RUNPID=$!

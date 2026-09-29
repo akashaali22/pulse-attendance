@@ -89,6 +89,7 @@ function insertPunch(userId: number, type: PunchType, ts: number, source: string
 
 export type AgentEventType = "IN" | "OUT" | "HEARTBEAT";
 export interface AgentEvent {
+  id?: string;
   type: AgentEventType;
   ageMs: number; // how long ago the event happened, measured on the PC's monotonic clock
   reason: string; // logon | unlock | resume | startup | shutdown | logoff | heartbeat | manual
@@ -128,6 +129,10 @@ export function handleAgentEvent(user: AgentUser, device: AgentDevice, ev: Agent
   }
 
   return tx(() => {
+    if (ev.id) {
+      const receipt = run("INSERT OR IGNORE INTO agent_receipts(device_id, event_id) VALUES (?, ?)", device.id, ev.id);
+      if (!receipt.changes) return { applied: false, note: "already received" };
+    }
     const { open, lastTs } = openSession(user.id, workDate);
     if (ts < lastTs) return { applied: false, note: "older than latest punch" };
     const flag = ev.queued ? `Sent later by agent (${reason}, offline)` : null;

@@ -8,7 +8,8 @@ const nextConfig: NextConfig = {
   // The download routes read these off disk at request time, so nothing in the code points at them
   // and the tracer would otherwise leave them out of the standalone bundle.
   outputFileTracingIncludes: {
-    "/api/agent/download": ["./agent/bin/PulseAgent.exe"],
+    "/api/agent/release": ["./agent/bin/PulseAgent-1.1.0.exe", "./agent/bin/PulseAgent.dmg", "./agent/bin/PulseAgent.dmg.version"],
+    "/api/agent/download": ["./agent/bin/PulseAgent-1.1.0.exe"],
     "/api/agent/download/mac-dmg": ["./agent/bin/PulseAgent.dmg"],
     "/api/agent/download/mac": ["./agent/mac/install.sh"],
     "/api/agent/download/mac-agent": ["./agent/mac/pulse-agent.sh"],

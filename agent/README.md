@@ -20,20 +20,22 @@ status and hours.
 
 ## Install
 
-A built `bin/PulseAgent.exe` is committed so a deployment can hand it to employees without a Windows
-build machine. Verify it against `bin/PulseAgent.exe.sha256`, or rebuild it yourself on Windows with
-`npm run build:agent` — the source is one file, [src/PulseAgent.cs](src/PulseAgent.cs).
+The company server is built into the app. Employees never enter its address.
 
-1. Employees get it from **Get the app** in the sidebar (admins also see it in Settings → Desktop agent).
-3. Optional: put a text file named `server.txt` next to the exe containing the server address, so
-   employees don't have to type it.
-4. Run it once on each PC and sign in with the employee's email and password. It adds itself to
-   Windows startup (a checkbox in the window controls this).
+1. Download the EXE from **Get the app** and open it.
+2. It installs in `%LOCALAPPDATA%\PulseAgent` and opens the default browser.
+3. Match the displayed code and choose **Continue as your name**. An existing browser login is reused.
+4. Windows startup uses the installed copy, so the downloaded file can be removed.
+
+For updates, use **Check for updates** in the tray. The package SHA-256 is checked before installation.
+If an older 1.0 app is running, exit its tray icon before opening the new installer.
+
+The versioned binary and checksum are committed. Rebuild with `npm run build:agent` on Windows.
 
 Right-click the tray icon for status, "Sync now", "Open dashboard" or "Sign out this PC". Admins can
 unlink any PC from Settings → Desktop agent.
 
-## No internet? Nothing is lost
+## Offline attendance
 
 Events are written to `%LOCALAPPDATA%\PulseAgent\queue.json` immediately and sent when the
 connection returns — with their **original** times, not the sync time.
@@ -53,7 +55,7 @@ age comes from the PC clock, so the server marks that punch as flagged for a man
 
 ## Security
 
-- Pairing exchanges the employee's password for a long-lived **device token**, stored encrypted with
+- A five-minute, single-use browser approval issues a **device token**, stored encrypted with
   Windows DPAPI for that Windows user only. The password itself is never stored.
 - The token is per PC and can be revoked at any time from Settings → Desktop agent.
 - The agent only sends events. It cannot read other employees' data.
@@ -74,3 +76,7 @@ macOS has its own agent, same idea and same server API: see [mac/README.md](mac/
 
 Everything is in [src/PulseAgent.cs](src/PulseAgent.cs) (C# 5 — keep it compatible with the compiler
 shipped in `C:\Windows\Microsoft.NET\Framework64\v4.0.30319`).
+
+Queue delivery uses acknowledged batches of at most 199 punches plus a heartbeat. Stable event IDs
+prevent replay after a lost response. Unlink requires an online server acknowledgement; if offline,
+the app retains the account and asks you to retry, rather than falsely claiming the device was revoked.

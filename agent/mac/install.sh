@@ -18,20 +18,17 @@ say ""
 say "  Pulse Attendance — Mac agent"
 say "  ───────────────────────────"
 
-server="${PULSE_SERVER:-${SERVER_DEFAULT}}"
-case "${server}" in
-  http://*|https://*) ;;
-  *) printf '  Server address (e.g. https://pulse-attendance.onrender.com): '; read -r server ;;
-esac
+server="${SERVER_DEFAULT}"
 
 mkdir -p "${APP_DIR}" "${HOME}/Library/LaunchAgents"
 say "  Downloading the agent…"
+launchctl unload "${PLIST}" >/dev/null 2>&1 || true
 curl -fsSL "${server%/}/api/agent/download/mac-agent" -o "${AGENT}"
 chmod +x "${AGENT}"
 
 say ""
-say "  Sign in once with the employee's account."
-"${AGENT}" pair "${server}" "${1:-}"
+say "  Confirm your account in the browser."
+"${AGENT}" pair "${server}"
 
 cat >"${PLIST}" <<PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>

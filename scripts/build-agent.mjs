@@ -19,11 +19,14 @@ const out = execFileSync(
     "/target:winexe",
     "/optimize+",
     "/platform:anycpu",
-    `/out:${path.join(root, "bin", "PulseAgent.exe")}`,
+    `/out:${path.join(root, "bin", "PulseAgent-1.1.0.exe")}`,
     ...refs.map((r) => `/reference:${path.join(fw, r)}`),
     path.join(root, "src", "PulseAgent.cs"),
   ],
   { encoding: "utf8" },
 );
 if (out.trim()) console.log(out);
-console.log("Built agent/bin/PulseAgent.exe");
+const binary = path.join(root, "bin", "PulseAgent-1.1.0.exe");
+const { createHash } = await import("node:crypto");
+fs.writeFileSync(binary + ".sha256", createHash("sha256").update(fs.readFileSync(binary)).digest("hex") + "\n");
+console.log("Built agent/bin/PulseAgent-1.1.0.exe");

@@ -11,7 +11,7 @@
 set -eu
 
 cd "$(dirname "$0")/.."            # web/
-SERVER=""
+SERVER="https://pulse-attendance.onrender.com"
 SIGN_ID="${SIGN_ID:-}"
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -85,7 +85,8 @@ Pulse Attendance — opening it the first time
    (On macOS 15 and later, right-clicking and choosing Open no longer works for
    unsigned apps — use one of the two steps above.)
 
-4. Sign in with your own work email and password. That is the only time you type it.
+4. The app opens your browser. Confirm your account to connect. If you are already
+   signed in, there is no password to enter and no server address to configure.
 
 No admin password is needed: it installs for your account only, starts at every
 login, and keeps its device token in the Mac's Keychain.
@@ -112,3 +113,5 @@ echo ""
 echo "  Commit it so the server can hand it to employees:"
 echo "    git add ${DMG} ${DMG}.sha256 && git commit -m 'Ship the Mac agent disk image' && git push"
 echo ""
+
+printf '1.1.0\n' >"${DMG}.version"

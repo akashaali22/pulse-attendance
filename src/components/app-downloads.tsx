@@ -13,7 +13,7 @@ export function detectOs(ua: string): Os {
   return "windows";
 }
 
-function Windows({ origin }: { origin: string }) {
+function Windows() {
   return (
     <div className="space-y-4 p-5 text-sm text-ink-2">
       <p className="text-ink">Records attendance by itself — nothing to press.</p>
@@ -22,10 +22,8 @@ function Windows({ origin }: { origin: string }) {
       </a>
       <ol className="list-decimal space-y-1.5 ps-5">
         <li>Run the file. Windows may warn about an unknown publisher — choose <em>More info → Run anyway</em>.</li>
-        <li>
-          Server address: <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs">{origin}</code>
-        </li>
-        <li>Sign in with your own email and password. That is the only time you type it.</li>
+        <li>The app opens your browser. Choose <strong>Continue as your name</strong> to connect.</li>
+        <li>Already signed in? No password is needed. The company connection is configured automatically.</li>
       </ol>
       <p className="text-xs text-muted">Needs nothing installed — it uses what already ships with Windows 10 and 11.</p>
     </div>
@@ -41,10 +39,8 @@ function Mac({ origin }: { origin: string }) {
       </a>
       <ol className="list-decimal space-y-1.5 ps-5">
         <li>Open the file and drag <strong>Pulse Attendance</strong> into <strong>Applications</strong>.</li>
-        <li>
-          Server address: <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs">{origin}</code>
-        </li>
-        <li>Sign in with your own email and password. That is the only time you type it.</li>
+        <li>The app opens your browser. Choose <strong>Continue as your name</strong> to connect.</li>
+        <li>Already signed in? No password is needed. The company connection is configured automatically.</li>
       </ol>
 
       {/* Every Mac shows this once, because the app is not notarised by Apple. Saying so plainly,
@@ -130,7 +126,7 @@ function Phone({ host, secure }: { host: string; secure: boolean }) {
 /** The three ways to get the app, the visitor's own platform first. */
 export function AppDownloads({ origin, host, secure, first }: { origin: string; host: string; secure: boolean; first: Os }) {
   const cards: Record<Os, { icon: React.ReactNode; title: string; body: React.ReactNode }> = {
-    windows: { icon: <Laptop className="size-4 text-accent" />, title: "Windows PC", body: <Windows origin={origin} /> },
+    windows: { icon: <Laptop className="size-4 text-accent" />, title: "Windows PC", body: <Windows /> },
     mac: { icon: <Apple className="size-4 text-accent" />, title: "Mac", body: <Mac origin={origin} /> },
     phone: { icon: <Smartphone className="size-4 text-accent" />, title: "Phone", body: <Phone host={host} secure={secure} /> },
   };
