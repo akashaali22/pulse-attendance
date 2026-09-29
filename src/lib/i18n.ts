@@ -2,6 +2,7 @@
 export type Lang = "en" | "ur";
 
 const ur: Record<string, string> = {
+  "Edit attendance": "حاضری میں ترمیم کریں",
   "Select a day to explore its timeline.": "اوقات کی تفصیل دیکھنے کے لیے دن منتخب کریں۔",
   "Your working day": "آپ کا کام کا دن",
   "You're on the clock.": "آپ کا کام جاری ہے۔",

@@ -7,15 +7,16 @@ import { adminCorrectDay } from "@/actions/requests";
 import { usePrefs } from "@/components/providers";
 import { Dialog } from "@/components/dialog";
 
-export function EditDay({ userId, name, date, inT, outT }: { userId: number; name: string; date: string; inT: string; outT: string }) {
+export function EditDay({ userId, name, date, inT, outT, label }: { userId: number; name: string; date: string; inT: string; outT: string; label?: string }) {
   const { t, toast } = usePrefs();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   return (
     <>
-      <button className="btn btn-ghost btn-sm" onClick={() => setOpen(true)} title={t("Edit")} aria-label={t("Edit")}>
+      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(true)} title={t(label ?? "Edit")} aria-label={t(label ?? "Edit")}>
         <Pencil className="size-3.5" />
+        {label && t(label)}
       </button>
       {open && (
         <Dialog label={`${t("Edit")} · ${name}`} onClose={() => setOpen(false)} className="max-w-sm">

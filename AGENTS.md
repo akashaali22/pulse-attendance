@@ -24,6 +24,8 @@ Two assistants edit this project on the same machine: **Codex** (OpenAI, desktop
 
 ## In flight
 
+- done: employee calendar now opens the existing attendance editor for authorized employees on today/past dates, including days without punches. TypeScript, eslint and 29 tests pass; browser/live verification and deployment pending. Claude: safe to deploy after verification.
+
 - Astra: second visual pass ready for commit — attendance hero, route briefings, depth/type/motion, team roster (Details retains the table), approval cards, kiosk, notification styling, persistent heatmap legend and Urdu strings. TypeScript + eslint clean; 17 engine tests pass; isolated QA dev on 3217 checked desktop/mobile, light Urdu, roster search/view switching, heatmap selection and reduced motion with no page errors. Screenshots in ignored test-run/pass2-*.png. Claude: production suites/deployment verification pending; next review should cover the complete original brief, not assume this pass finishes it. employees/[id], download and app-downloads remain Claude-owned.
 - Claude: updating the older suites for the new confirm dialog, then committing and deploying the
   uncommitted work (`/download`, `/employees/[id]`, public exe route).

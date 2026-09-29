@@ -9,7 +9,7 @@ import { computeRange, getTz, leaveBalances, todayLocal } from "@/lib/data";
 import { summarize, weekStart, weeklyLate } from "@/lib/engine";
 import { lateAllowance, penaltiesFor } from "@/lib/penalty";
 import { reliabilityScore, signalsFor } from "@/lib/insights";
-import { fmtDuration, fmtTime, monthBounds } from "@/lib/time";
+import { fmtDuration, fmtTime, localMinutes, minutesToHhmm, monthBounds } from "@/lib/time";
 import { getPrefs } from "@/lib/prefs";
 import { shiftLabel } from "@/lib/view";
 import { passwordViewEnabled } from "@/lib/passwords";
@@ -85,6 +85,8 @@ export default async function EmployeePage({
     workedMin: d.workedMin,
     breakLabel: d.breakMin ? fmtDuration(d.breakMin) : "—",
     firstIn: fmtTime(d.firstIn, tz),
+    inT: d.firstIn ? minutesToHhmm(localMinutes(d.firstIn, tz)) : "",
+    outT: d.lastOut && d.status !== "WORKING" && d.status !== "ON_BREAK" ? minutesToHhmm(localMinutes(d.lastOut, tz)) : "",
     lastOut: d.status === "WORKING" || d.status === "ON_BREAK" ? "—" : fmtTime(d.lastOut, tz),
     flags: d.flags,
     sessions: d.sessions.map((x) => ({
@@ -283,7 +285,7 @@ export default async function EmployeePage({
       </div>
 
       <div className="mt-4">
-        <EmployeeCalendar cells={cells} months={months} month={month} monthLabel={monthLabel} basePath={`/employees/${emp.id}`} today={today} yearNote={yearNote} />
+        <EmployeeCalendar cells={cells} months={months} month={month} monthLabel={monthLabel} basePath={`/employees/${emp.id}`} today={today} yearNote={yearNote} employee={{ id: emp.id, name: emp.name, canEdit: emp.id !== me.id }} />
       </div>
 
       {/* The record itself: every month on file for the chosen year */}

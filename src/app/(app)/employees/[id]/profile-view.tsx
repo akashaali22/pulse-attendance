@@ -8,6 +8,7 @@ import { SERIES } from "@/lib/chart-series";
 import { Legend } from "@/components/charts";
 import { Card, Empty, StatusBadge } from "@/components/ui";
 import { usePrefs } from "@/components/providers";
+import { EditDay } from "../../team/edit-day";
 
 export interface DayCell {
   date: string;
@@ -21,6 +22,8 @@ export interface DayCell {
   breakLabel: string;
   firstIn: string;
   lastOut: string;
+  inT: string;
+  outT: string;
   flags: string[];
   sessions: { in: string; out: string; breaks: { start: string; end: string }[] }[];
 }
@@ -101,6 +104,7 @@ export function EmployeeCalendar({
   basePath,
   today,
   yearNote,
+  employee,
 }: {
   cells: DayCell[];
   months: MonthPoint[];
@@ -108,6 +112,7 @@ export function EmployeeCalendar({
   monthLabel: string;
   basePath: string;
   today: string;
+  employee: { id: number; name: string; canEdit: boolean };
   /** Set when the year only has records from this date on, so the chart cannot imply absences. */
   yearNote?: string | null;
 }) {
@@ -115,7 +120,7 @@ export function EmployeeCalendar({
   const href = (value: string) => `${basePath}?month=${encodeURIComponent(value)}`;
   const worked = useMemo(() => cells.filter((c) => c.date <= today && c.sessions.length > 0), [cells, today]);
   const [picked, setPicked] = useState<string | null>(null);
-  const day = cells.find((c) => c.date === picked) ?? worked[worked.length - 1] ?? null;
+  const day = cells.find((c) => c.date === picked) ?? worked[worked.length - 1] ?? cells.find((c) => c.date === today) ?? cells.find((c) => c.date <= today) ?? null;
 
   const [y, m] = (cells[0]?.date ?? `${month}-01`).split("-").map(Number);
   const lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7; // weeks start Monday
@@ -166,6 +171,9 @@ export function EmployeeCalendar({
                   {day.date} <span className="text-sm font-normal text-muted">{day.weekday}</span>
                 </span>
                 <StatusBadge status={day.status as never} label={t(day.status)} />
+                {employee.canEdit && day.date <= today && (
+                  <EditDay key={`${employee.id}:${day.date}`} userId={employee.id} name={employee.name} date={day.date} inT={day.inT} outT={day.outT} label="Edit attendance" />
+                )}
                 {day.late && <span className="text-xs text-warn">{day.lateMin}m {t("Late").toLowerCase()}</span>}
                 {day.earlyMin > 0 && <span className="text-xs text-warn">{t("Early leave")} {day.earlyMin}m</span>}
               </div>
