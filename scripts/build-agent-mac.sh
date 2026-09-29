@@ -54,6 +54,39 @@ fi
 echo "  Signing…"
 codesign --force --deep --sign - "${APP}" >/dev/null 2>&1 || echo "  (could not sign — the app still runs, but the bundle is unsealed)"
 
+# The first thing anyone sees after opening the image, because macOS will refuse the app once.
+cat >"${STAGE}/How to open this.txt" <<'NOTE'
+Pulse Attendance — opening it the first time
+============================================
+
+1. Drag "Pulse Attendance" onto the Applications folder in this window.
+
+2. Double-click it. macOS will say it "cannot verify this app is free of malware".
+   That message appears for every app that is not signed with a paid Apple Developer
+   ID. It is not a finding about this app.
+
+3. Open  System Settings > Privacy & Security , scroll to the bottom, and press
+   "Open Anyway". Then open the app again.
+
+   Or, in Terminal, clear the download flag once:
+
+       xattr -dr com.apple.quarantine "/Applications/Pulse Attendance.app"
+
+   (On macOS 15 and later, right-clicking and choosing Open no longer works for
+   unsigned apps — use one of the two steps above.)
+
+4. Sign in with your own work email and password. That is the only time you type it.
+
+No admin password is needed: it installs for your account only, starts at every
+login, and keeps its device token in the Mac's Keychain.
+
+Prefer one line in Terminal instead, with no warning at all? Run:
+
+    curl -fsSL YOUR-SERVER/api/agent/download/mac | bash
+NOTE
+
+[ -n "${SERVER}" ] && sed -i '' "s|YOUR-SERVER|${SERVER%/}|" "${STAGE}/How to open this.txt"
+
 ln -s /Applications "${STAGE}/Applications"
 mkdir -p agent/bin
 rm -f "${DMG}"

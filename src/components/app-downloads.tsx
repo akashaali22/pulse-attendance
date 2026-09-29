@@ -36,29 +36,49 @@ function Mac({ origin }: { origin: string }) {
   return (
     <div className="space-y-4 p-5 text-sm text-ink-2">
       <p className="text-ink">Records attendance by itself — nothing to press.</p>
-      <a href="/api/agent/download/mac-dmg" className="btn btn-primary w-full" download>
-        <Download className="size-4" /> Download PulseAgent.dmg
-      </a>
+
+      {/* Terminal first, deliberately: the app is signed but not notarised by Apple, so macOS
+          blocks the .dmg on first open. The installer is the same agent with no Gatekeeper prompt. */}
+      <CopyBox text={`curl -fsSL ${origin}/api/agent/download/mac | bash`} />
       <ol className="list-decimal space-y-1.5 ps-5">
-        <li>Open the downloaded file and drag <strong>Pulse Attendance</strong> into <strong>Applications</strong>.</li>
-        <li>
-          The first time, <strong>right-click the app and choose Open</strong> — macOS blocks a plain double-click for
-          apps it has not seen before.
-        </li>
-        <li>
-          Server address: <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs">{origin}</code>
-        </li>
-        <li>Sign in with your own email and password. That is the only time you type it.</li>
+        <li>Open <strong>Terminal</strong> (Command + Space, type “Terminal”).</li>
+        <li>Paste the line above and press Return.</li>
+        <li>Sign in with your own email and password when asked. That is the only time you type it.</li>
       </ol>
+
       <details className="rounded-xl border border-line p-3">
-        <summary className="cursor-pointer text-xs font-medium text-ink">Prefer Terminal? One line does the same.</summary>
-        <div className="mt-2">
-          <CopyBox text={`curl -fsSL ${origin}/api/agent/download/mac | bash`} />
+        <summary className="cursor-pointer text-xs font-medium text-ink">Prefer an app you can see in Applications?</summary>
+        <div className="mt-3 space-y-3">
+          <a href="/api/agent/download/mac-dmg" className="btn btn-ghost w-full" download>
+            <Download className="size-4" /> Download PulseAgent.dmg
+          </a>
+          <p className="text-xs">
+            macOS will say it <em>cannot verify this app is free of malware</em>. That warning appears for every app
+            not signed with a paid Apple Developer ID — it is not a finding about this app. Two ways past it:
+          </p>
+          <ol className="list-decimal space-y-1.5 ps-5 text-xs">
+            <li>Open the image and drag <strong>Pulse Attendance</strong> into <strong>Applications</strong>.</li>
+            <li>
+              Double-click it once and let the warning appear, then go to <strong>System Settings → Privacy &amp;
+              Security</strong>, scroll down and press <strong>Open Anyway</strong>.
+            </li>
+            <li>
+              Or clear the download flag in Terminal, and it opens normally afterwards:
+              <div className="mt-2">
+                <CopyBox text={'xattr -dr com.apple.quarantine "/Applications/Pulse Attendance.app"'} />
+              </div>
+            </li>
+          </ol>
+          <p className="text-xs text-muted">
+            On macOS 15 and later, right-clicking and choosing <em>Open</em> no longer works for unsigned apps — use one
+            of the two steps above.
+          </p>
         </div>
       </details>
+
       <p className="text-xs text-muted">
-        Installs for your account only — no admin password needed. It starts at every login and keeps your device token
-        in the Mac’s Keychain.
+        Either way it installs for your account only — no admin password needed. It starts at every login and keeps your
+        device token in the Mac’s Keychain.
       </p>
     </div>
   );

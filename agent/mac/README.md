@@ -11,7 +11,7 @@ folder, and the device token is kept in the login Keychain rather than a file.
 
 | | For whom | How |
 |---|---|---|
-| **PulseAgent.dmg** | Everyone | Drag to Applications, right-click → Open, sign in |
+| **PulseAgent.dmg** | People who want an app in Applications | Drag to Applications, allow it once (see Gatekeeper), sign in |
 | **One-line Terminal install** | People comfortable with Terminal, and remote setup | `curl -fsSL https://your-server/api/agent/download/mac \| bash` |
 
 Both end up running the same [pulse-agent.sh](pulse-agent.sh) from
@@ -42,9 +42,22 @@ image to employees at `/api/agent/download/mac-dmg`, exactly as it hands `PulseA
 ## Gatekeeper
 
 The app is signed ad-hoc, not with an Apple Developer certificate, so macOS does not recognise the
-publisher. The first launch must be **right-click → Open**; after that it opens normally. Buying a
-Developer ID ($99/year) and notarising the image would remove that step — nothing else about the
-agent would change.
+publisher. On first launch it refuses the app and says it **cannot verify this app is free of
+malware** — that sentence appears for every app without a paid Developer ID and says nothing about
+this one.
+
+Two ways past it, both one-time:
+
+- **System Settings → Privacy & Security**, scroll to the bottom, **Open Anyway**, then open the app again.
+- Or clear the download flag: `xattr -dr com.apple.quarantine "/Applications/Pulse Attendance.app"`
+
+On macOS 15 (Sequoia) and later, right-clicking and choosing **Open** no longer works for unsigned
+apps — Apple removed that bypass, so use one of the two above.
+
+The one-line installer (`curl -fsSL <server>/api/agent/download/mac | bash`) never hits Gatekeeper at
+all, because it installs a launchd agent rather than an app bundle. That is why the download page
+offers it first. Buying a Developer ID ($99/year) and notarising the image would remove the warning
+from the .dmg path — nothing else about the agent would change.
 
 The ad-hoc signature is not what makes the app run — the bundle's executable is a shell script, so the
 binary macOS actually launches is Apple's own `/bin/bash`. It seals the bundle instead, so macOS
