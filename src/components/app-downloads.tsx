@@ -73,6 +73,15 @@ function Mac({ origin }: { origin: string }) {
             On macOS 15 and later, right-clicking and choosing <em>Open</em> no longer works for unsigned apps — use one
             of the two steps above.
           </p>
+          <div className="rounded-xl border border-good/30 bg-good/5 p-3">
+            <div className="text-xs font-semibold text-ink">No warning at all: bring it on a USB stick</div>
+            <p className="mt-1 text-xs">
+              The warning comes from the flag a browser attaches to anything it downloads, not from the app. Copy
+              PulseAgent.dmg onto a USB stick from another computer, plug it into the Mac and open it from there: the
+              flag was never set, so the app opens with a plain double-click. Copying it from a shared network folder
+              works the same way. AirDrop and email do not — they set the flag too.
+            </p>
+          </div>
         </div>
       </details>
 

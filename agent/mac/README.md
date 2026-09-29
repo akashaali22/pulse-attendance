@@ -39,6 +39,20 @@ image to employees at `/api/agent/download/mac-dmg`, exactly as it hands `PulseA
 
 `--server` only pre-fills the address in the first-run dialog; employees can still change it.
 
+## The free way to install without any warning
+
+The warning comes from `com.apple.quarantine`, a flag that browsers, AirDrop and mail clients attach
+to files they bring in — not from the app itself. A copy that never gets the flag never triggers
+Gatekeeper's prompt:
+
+- Put `PulseAgent.dmg` on a **USB stick** from a Windows or Linux machine, plug it into the Mac and
+  open it from the stick. Drag the app to Applications and double-click: no warning.
+- Copying it from a **shared network folder** (SMB) behaves the same way.
+- The one-line Terminal installer also never meets Gatekeeper, because it installs a launchd agent
+  instead of an app bundle.
+
+AirDrop, email and any browser download do set the flag, so those copies will prompt.
+
 ## Making the warning go away for good
 
 The warning is Apple's, not this app's: macOS refuses anything that has not been **notarised**, and
