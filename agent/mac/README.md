@@ -39,6 +39,26 @@ image to employees at `/api/agent/download/mac-dmg`, exactly as it hands `PulseA
 
 `--server` only pre-fills the address in the first-run dialog; employees can still change it.
 
+## Making the warning go away for good
+
+The warning is Apple's, not this app's: macOS refuses anything that has not been **notarised**, and
+notarisation needs an Apple Developer ID, which costs USD 99 a year. Everything to use one is
+already wired up — the build signs and notarises as soon as these four secrets exist in the
+repository (Settings → Secrets and variables → Actions):
+
+| Secret | What it is |
+|---|---|
+| `APPLE_CERT_P12` | The "Developer ID Application" certificate exported as .p12, then base64-encoded |
+| `APPLE_CERT_PASSWORD` | The password you set when exporting that .p12 |
+| `APPLE_ID` | The Apple ID of the developer account |
+| `APPLE_APP_PASSWORD` | An app-specific password for that Apple ID (appleid.apple.com → Sign-In and Security) |
+| `APPLE_TEAM_ID` | The 10-character team ID from developer.apple.com → Membership |
+
+Run **Actions → Build the Mac agent → Run workflow**. The image is then signed, sent to Apple,
+stapled with Apple's approval, and opens on any Mac with a plain double-click — no Terminal, no
+Privacy & Security detour, and it works offline. Without those secrets the build behaves exactly as
+before, with an ad-hoc signature.
+
 ## Gatekeeper
 
 The app is signed ad-hoc, not with an Apple Developer certificate, so macOS does not recognise the

@@ -12,11 +12,14 @@ set -eu
 
 cd "$(dirname "$0")/.."            # web/
 SERVER=""
+SIGN_ID="${SIGN_ID:-}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --server) SERVER="${2:-}"; shift 2 ;;
+    --sign) SIGN_ID="${2:-}"; shift 2 ;;
+    --sign=*) SIGN_ID="${1#--sign=}"; shift ;;
     --server=*) SERVER="${1#--server=}"; shift ;;
-    *) echo "Unknown option: $1"; echo "Usage: build-agent-mac.sh [--server https://your-server]"; exit 1 ;;
+    *) echo "Unknown option: $1"; echo "Usage: build-agent-mac.sh [--server https://your-server] [--sign 'Developer ID Application: …']"; exit 1 ;;
   esac
 done
 
@@ -49,10 +52,17 @@ if [ -f public/icon-512.png ]; then
   iconutil -c icns "${ICONSET}" -o "${APP}/Contents/Resources/AppIcon.icns" 2>/dev/null || echo "  (icon skipped)"
 fi
 
-# Ad-hoc signature. It buys no trust from Gatekeeper — employees still open it the first time with
-# right-click → Open — but it seals the bundle, so macOS notices if anything inside is swapped out.
-echo "  Signing…"
-codesign --force --deep --sign - "${APP}" >/dev/null 2>&1 || echo "  (could not sign — the app still runs, but the bundle is unsealed)"
+# Signing. With a Developer ID identity (SIGN_ID) the image can then be notarised by Apple and opens
+# anywhere with no warning at all. Without one, an ad-hoc signature seals the bundle — macOS still
+# refuses the first launch, because only Apple's notarisation buys that trust.
+if [ -n "${SIGN_ID:-}" ]; then
+  echo "  Signing with ${SIGN_ID}…"
+  codesign --force --deep --timestamp --options runtime --sign "${SIGN_ID}" "${APP}"
+  codesign --verify --deep --strict --verbose=2 "${APP}"
+else
+  echo "  Signing ad-hoc (no Developer ID given)…"
+  codesign --force --deep --sign - "${APP}" >/dev/null 2>&1 || echo "  (could not sign — the app still runs, but the bundle is unsealed)"
+fi
 
 # The first thing anyone sees after opening the image, because macOS will refuse the app once.
 cat >"${STAGE}/How to open this.txt" <<'NOTE'
@@ -92,6 +102,7 @@ mkdir -p agent/bin
 rm -f "${DMG}"
 echo "  Creating the disk image…"
 hdiutil create -volname "${APP_NAME}" -srcfolder "${STAGE}" -ov -format UDZO -quiet "${DMG}"
+[ -n "${SIGN_ID:-}" ] && codesign --force --timestamp --sign "${SIGN_ID}" "${DMG}"
 shasum -a 256 "${DMG}" | awk '{print $1}' >"${DMG}.sha256"
 
 echo ""

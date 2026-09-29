@@ -24,11 +24,46 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: write
+    env:
+      APPLE_CERT_P12: ${{ secrets.APPLE_CERT_P12 }}
     steps:
       - uses: actions/checkout@v4
 
+      # With an Apple Developer ID in the repository's secrets, the image is signed and notarised,
+      # and then opens on any Mac with no warning at all. Without those secrets nothing here runs and
+      # the build falls back to an ad-hoc signature, exactly as before.
+      - name: Unlock the signing certificate
+        if: ${{ env.APPLE_CERT_P12 != '' }}
+        env:
+          APPLE_CERT_P12: ${{ secrets.APPLE_CERT_P12 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+        run: |
+          echo "$APPLE_CERT_P12" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p actions build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p actions build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain >/dev/null
+          rm -f /tmp/cert.p12
+          echo "SIGN_ID=$(security find-identity -v -p codesigning build.keychain | awk -F'"' '/Developer ID Application/ {print $2; exit}')" >> "$GITHUB_ENV"
+
       - name: Build the disk image
         run: bash scripts/build-agent-mac.sh --server "${{ inputs.server || 'https://pulse-attendance.onrender.com' }}"
+
+      # Apple checks the image and records its approval; stapling writes that approval into the file,
+      # so it opens cleanly even on a Mac that is offline.
+      - name: Notarise it with Apple
+        if: ${{ env.SIGN_ID != '' }}
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit agent/bin/PulseAgent.dmg             --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+          xcrun stapler staple agent/bin/PulseAgent.dmg
+          spctl --assess --type open --context context:primary-signature -vv agent/bin/PulseAgent.dmg
+          shasum -a 256 agent/bin/PulseAgent.dmg | awk '{print $1}' > agent/bin/PulseAgent.dmg.sha256
+          echo "Notarised and stapled: this image now opens on any Mac with no warning."
 
       - name: Check the app actually assembled
         run: |
