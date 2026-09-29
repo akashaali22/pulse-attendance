@@ -36,58 +36,64 @@ function Mac({ origin }: { origin: string }) {
   return (
     <div className="space-y-4 p-5 text-sm text-ink-2">
       <p className="text-ink">Records attendance by itself — nothing to press.</p>
-
-      {/* Terminal first, deliberately: the app is signed but not notarised by Apple, so macOS
-          blocks the .dmg on first open. The installer is the same agent with no Gatekeeper prompt. */}
-      <CopyBox text={`curl -fsSL ${origin}/api/agent/download/mac | bash`} />
+      <a href="/api/agent/download/mac-dmg" className="btn btn-primary w-full" download>
+        <Download className="size-4" /> Download PulseAgent.dmg
+      </a>
       <ol className="list-decimal space-y-1.5 ps-5">
-        <li>Open <strong>Terminal</strong> (Command + Space, type “Terminal”).</li>
-        <li>Paste the line above and press Return.</li>
-        <li>Sign in with your own email and password when asked. That is the only time you type it.</li>
+        <li>Open the file and drag <strong>Pulse Attendance</strong> into <strong>Applications</strong>.</li>
+        <li>
+          Server address: <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs">{origin}</code>
+        </li>
+        <li>Sign in with your own email and password. That is the only time you type it.</li>
       </ol>
 
+      {/* Every Mac shows this once, because the app is not notarised by Apple. Saying so plainly,
+          before it happens, is what stops people thinking they have downloaded something harmful. */}
+      <div className="rounded-xl border border-warn/40 bg-warn/5 p-3">
+        <div className="text-xs font-semibold text-ink">The first time, macOS will stop it once — this is normal</div>
+        <p className="mt-1 text-xs">
+          You will see <em>“Pulse Attendance” Not Opened — Apple could not verify this app is free of malware</em>.
+          Every app that is not signed with a paid Apple developer account shows this. Nothing is wrong with the file.
+          Allow it once:
+        </p>
+        <ol className="mt-2 list-decimal space-y-1.5 ps-5 text-xs">
+          <li>Press <strong>Done</strong> on that message. <strong>Not</strong> “Move to Trash”.</li>
+          <li>Open <strong>System Settings</strong> → <strong>Privacy &amp; Security</strong> and scroll to the bottom.</li>
+          <li>
+            It says <em>“Pulse Attendance” was blocked to protect your Mac</em> — press <strong>Open Anyway</strong>.
+          </li>
+          <li>Give your Touch ID or Mac password, then press <strong>Open Anyway</strong> once more.</li>
+        </ol>
+        <p className="mt-2 text-xs text-muted">
+          That is a one-time step. From then on the app opens with a plain double-click, like any other.
+          If the button is not there, open the app again so the message appears, then look in Settings.
+        </p>
+      </div>
+
       <details className="rounded-xl border border-line p-3">
-        <summary className="cursor-pointer text-xs font-medium text-ink">Prefer an app you can see in Applications?</summary>
-        <div className="mt-3 space-y-3">
-          <a href="/api/agent/download/mac-dmg" className="btn btn-ghost w-full" download>
-            <Download className="size-4" /> Download PulseAgent.dmg
-          </a>
-          <p className="text-xs">
-            macOS will say it <em>cannot verify this app is free of malware</em>. That warning appears for every app
-            not signed with a paid Apple Developer ID — it is not a finding about this app. Two ways past it:
-          </p>
-          <ol className="list-decimal space-y-1.5 ps-5 text-xs">
-            <li>Open the image and drag <strong>Pulse Attendance</strong> into <strong>Applications</strong>.</li>
-            <li>
-              Double-click it once and let the warning appear, then go to <strong>System Settings → Privacy &amp;
-              Security</strong>, scroll down and press <strong>Open Anyway</strong>.
-            </li>
-            <li>
-              Or clear the download flag in Terminal, and it opens normally afterwards:
-              <div className="mt-2">
-                <CopyBox text={'xattr -dr com.apple.quarantine "/Applications/Pulse Attendance.app"'} />
-              </div>
-            </li>
-          </ol>
-          <p className="text-xs text-muted">
-            On macOS 15 and later, right-clicking and choosing <em>Open</em> no longer works for unsigned apps — use one
-            of the two steps above.
-          </p>
-          <div className="rounded-xl border border-good/30 bg-good/5 p-3">
-            <div className="text-xs font-semibold text-ink">No warning at all: bring it on a USB stick</div>
-            <p className="mt-1 text-xs">
-              The warning comes from the flag a browser attaches to anything it downloads, not from the app. Copy
-              PulseAgent.dmg onto a USB stick from another computer, plug it into the Mac and open it from there: the
-              flag was never set, so the app opens with a plain double-click. Copying it from a shared network folder
-              works the same way. AirDrop and email do not — they set the flag too.
+        <summary className="cursor-pointer text-xs font-medium text-ink">Ways to skip that step entirely</summary>
+        <div className="mt-3 space-y-3 text-xs">
+          <div>
+            <div className="font-semibold text-ink">One line in Terminal</div>
+            <p className="mt-1">Installs the same agent with no app bundle, so macOS never asks anything.</p>
+            <div className="mt-2">
+              <CopyBox text={`curl -fsSL ${origin}/api/agent/download/mac | bash`} />
+            </div>
+          </div>
+          <div>
+            <div className="font-semibold text-ink">Bring the file in on a USB stick</div>
+            <p className="mt-1">
+              The block comes from a flag browsers, AirDrop and mail attach to anything they bring in. Copy
+              PulseAgent.dmg onto a USB stick from another computer, or take it from a shared network folder, and it
+              opens with a plain double-click.
             </p>
           </div>
         </div>
       </details>
 
       <p className="text-xs text-muted">
-        Either way it installs for your account only — no admin password needed. It starts at every login and keeps your
-        device token in the Mac’s Keychain.
+        Installs for your account only — no admin password needed. It starts at every login and keeps your device token
+        in the Mac’s Keychain.
       </p>
     </div>
   );
