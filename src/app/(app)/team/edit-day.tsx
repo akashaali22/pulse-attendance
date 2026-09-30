@@ -27,7 +27,8 @@ export function EditDay({ userId, name, date, inT, outT, label }: { userId: numb
               e.preventDefault();
               const f = new FormData(e.currentTarget);
               start(async () => {
-                const r = await adminCorrectDay(userId, date, String(f.get("in") ?? ""), String(f.get("out") ?? ""), String(f.get("reason") ?? ""));
+                const newOut = String(f.get("out") ?? "");
+                const r = await adminCorrectDay(userId, date, String(f.get("in") ?? ""), newOut, String(f.get("reason") ?? ""), !!outT && !newOut);
                 if (r.ok) {
                   toast(t(r.message ?? "Saved successfully"));
                   setOpen(false);

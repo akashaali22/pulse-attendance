@@ -155,7 +155,7 @@ export async function reviewCorrection(id: number, decision: "approved" | "rejec
  * Only check-in → replaces the earliest IN. Only check-out → replaces the latest OUT.
  * Old punches are voided (never deleted) so the evidence remains.
  */
-function applyCorrection(userId: number, date: string, inT: string | null, outT: string | null, source: string) {
+function applyCorrection(userId: number, date: string, inT: string | null, outT: string | null, source: string, clearOut = false) {
   const tz = getTz();
   const now = Date.now();
   const existing = all<{ id: number; type: string; ts: number }>(
@@ -164,7 +164,7 @@ function applyCorrection(userId: number, date: string, inT: string | null, outT:
     date,
   );
   const voidIds: number[] = [];
-  if (inT && outT) voidIds.push(...existing.map((p) => p.id));
+  if ((inT && outT) || (inT && clearOut)) voidIds.push(...existing.map((p) => p.id));
   else if (inT) {
     const firstIn = existing.find((p) => p.type === "IN");
     if (firstIn) voidIds.push(firstIn.id);
@@ -188,15 +188,17 @@ function applyCorrection(userId: number, date: string, inT: string | null, outT:
 }
 
 /** Direct edit by an admin/manager (no request needed) — always audited. */
-export async function adminCorrectDay(userId: number, date: string, inT: string, outT: string, reason: string): Promise<ActionResult> {
+export async function adminCorrectDay(userId: number, date: string, inT: string, outT: string, reason: string, clearOut = false): Promise<ActionResult> {
   const me = await requireUser(["admin", "manager"]);
   if (!canManage(me, userId) || userId === me.id) return fail("You cannot edit this employee");
   if (!isIsoDate(date) || date > todayLocal()) return fail("Choose today or a past date");
   if ((inT && !isHhmm(inT)) || (outT && !isHhmm(outT)) || (!inT && !outT)) return fail("Use HH:MM times");
   if (inT && outT && outT <= inT) return fail("Check-out must be after check-in");
   if (reason.trim().length < 3) return fail("Please give a reason");
-  tx(() => applyCorrection(userId, date, inT || null, outT || null, "ADMIN"));
-  audit(me.id, "ATTENDANCE_EDITED", "punch", `${userId}:${date}`, { inT, outT, reason });
+  // Admin blanked the check-out (--:--): remove it, keeping only the check-in.
+  const removeOut = clearOut && !outT && !!inT;
+  tx(() => applyCorrection(userId, date, inT || null, outT || null, "ADMIN", removeOut));
+  audit(me.id, "ATTENDANCE_EDITED", "punch", `${userId}:${date}`, { inT, outT, reason, clearedOut: removeOut });
   syncLatePenalty(userId, date);
   notify(userId, "Attendance updated", `${date} was edited by ${me.name}: ${reason}`, "/attendance");
   revalidatePath("/", "layout");

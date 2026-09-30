@@ -59,6 +59,17 @@ export async function saveEmployee(_: ActionResult | null, form: FormData): Prom
     const password = typed || generatePassword();
     const invalid = validatePassword(password);
     if (invalid) return fail(invalid);
+    // A deactivated (removed) employee still holds this email / code — free them up so they can be reused.
+    const old = get<{ id: number; email: string; emp_code: string }>(
+      "SELECT id, email, emp_code FROM users WHERE status = 'inactive' AND (email = ? COLLATE NOCASE OR emp_code = ?)",
+      data.email,
+      data.emp_code,
+    );
+    if (old) {
+      const tag = `archived-${old.id}-${Date.now()}`;
+      run("UPDATE users SET email = ?, emp_code = ? WHERE id = ?", `${tag}+${old.email}`, `${old.emp_code}~${tag}`, old.id);
+      audit(me.id, "EMPLOYEE_ARCHIVED", "user", old.id, { email: old.email, emp_code: old.emp_code });
+    }
     const r = run(
       `INSERT INTO users(emp_code, name, email, password_hash, role, department_id, shift_id, manager_id, designation, phone,
        joined_on, require_geofence, require_selfie, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
