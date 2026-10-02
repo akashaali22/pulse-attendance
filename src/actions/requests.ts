@@ -188,6 +188,7 @@ function applyCorrection(userId: number, date: string, inT: string | null, outT:
 }
 
 /** Direct edit by an admin/manager (no request needed) — always audited. */
+/** Pass clearOut when the admin blanks the check-out (--:--) so it is removed. */
 export async function adminCorrectDay(userId: number, date: string, inT: string, outT: string, reason: string, clearOut = false): Promise<ActionResult> {
   const me = await requireUser(["admin", "manager"]);
   if (!canManage(me, userId) || userId === me.id) return fail("You cannot edit this employee");

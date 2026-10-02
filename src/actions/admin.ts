@@ -18,6 +18,7 @@ const uniqueErr = (e: unknown, what: string) =>
   e instanceof Error && /UNIQUE/.test(e.message) ? fail(`${what} already exists`) : fail(e instanceof Error ? e.message : "Failed");
 
 // ───────────────────────── Employees ─────────────────────────
+// Removing an employee only deactivates them; their email/code is archived when reused.
 
 export async function saveEmployee(_: ActionResult | null, form: FormData): Promise<ActionResult> {
   const me = await requireUser(["admin"]);
